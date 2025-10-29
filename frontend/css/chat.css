@@ -1,0 +1,879 @@
+/* ---
+   SSAD Chat Modal Stylesheet (chat.css)
+   --- */
+
+/* 1. Chat Modal Wrapper (Grid Layout)
+   ----------------------------- */
+
+/* Use a larger modal for the chat interface */
+.modal-overlay#chat-modal .chat-wrapper {
+    background-color: var(--bg-secondary);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 1200px; /* Large chat UI */
+    height: 90vh;
+    max-height: 90vh;
+    overflow: hidden; /* Prevent modal overflow, handle scrolling inside */
+    position: relative;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    display: grid;
+    grid-template-columns: 80px 320px 1fr; /* Nav | Sidebar | Main */
+    grid-template-rows: 1fr;
+
+    /* Animation */
+    transform: scale(0.95) translateY(10px);
+    transition: transform 0.3s ease;
+}
+.modal-overlay.visible#chat-modal .chat-wrapper {
+    transform: scale(1) translateY(0);
+}
+
+/* Override default modal content */
+.modal-overlay#chat-modal .modal-content {
+    display: none;
+}
+
+/* Elevate the close button */
+.modal-overlay#chat-modal .modal-close {
+    z-index: 1010; /* Above everything */
+}
+
+
+/* 2. Column 1: Chat Navigation
+   ----------------------------- */
+.chat-nav {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-primary); /* Slightly darker */
+    border-right: 1px solid var(--border-color);
+    padding: 1.5rem 0.75rem;
+    z-index: 1000;
+}
+
+.chat-nav-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+}
+.chat-nav-header .logo {
+    width: 48px;
+    height: 48px;
+    background-color: var(--accent-primary);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.chat-nav-header .logo i {
+    width: 24px;
+    height: 24px;
+    color: var(--text-on-accent);
+}
+.chat-nav-header .chat-username-display {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-align: center;
+    word-break: break-all;
+}
+
+.chat-nav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex-grow: 1;
+}
+.chat-nav-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.75rem 0.5rem;
+    border-radius: 8px;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    position: relative;
+}
+.chat-nav-link i {
+    width: 24px;
+    height: 24px;
+}
+.chat-nav-link span {
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+.chat-nav-link:hover {
+    background-color: var(--accent-secondary);
+    color: var(--text-primary);
+}
+.chat-nav-link.active {
+    background-color: var(--accent-secondary);
+    color: var(--accent-primary);
+}
+
+/* Notification bubble for requests */
+.chat-notification-bubble {
+    position: absolute;
+    top: 8px;
+    right: 14px;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: var(--error);
+    color: var(--text-on-notify);
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    /* Animation */
+    transform: scale(0);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.chat-notification-bubble.visible {
+    transform: scale(1);
+    opacity: 1;
+}
+
+.chat-nav-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.chat-connection-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--success);
+}
+.chat-connection-status i {
+    width: 16px;
+    height: 16px;
+}
+.chat-connection-status.disconnected {
+    color: var(--error);
+}
+
+
+/* 3. Column 2: Chat Sidebar (Lists)
+   ----------------------------- */
+.chat-sidebar {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-secondary);
+    border-right: 1px solid var(--border-color);
+    overflow: hidden;
+    position: relative;
+}
+.chat-sidebar-panel {
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    /* Animation */
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.chat-sidebar-panel.active {
+    display: flex;
+    opacity: 1;
+    transform: translateX(0);
+    transition-delay: 0.1s; /* Stagger animation */
+}
+
+.chat-sidebar-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.chat-sidebar-header h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.chat-search-container {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.chat-search-container .input-group {
+    position: relative;
+    margin-bottom: 0;
+}
+.chat-search-container .input-icon {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: var(--text-secondary);
+}
+.chat-search-container input {
+    padding-left: 2.5rem;
+}
+
+.chat-list-container {
+    flex-grow: 1;
+    overflow-y: auto;
+}
+.chat-list-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+    height: 100%;
+    color: var(--text-secondary);
+}
+.chat-list-placeholder i {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 1rem;
+    color: var(--text-placeholder);
+}
+.chat-list-placeholder p {
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* Chat List Item (for chats, requests, search) */
+.chat-list-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border: none;
+    width: 100%;
+    text-align: left;
+    background-color: transparent;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    position: relative;
+}
+.chat-list-item:hover {
+    background-color: var(--accent-secondary);
+}
+.chat-list-item.active {
+    background-color: var(--accent-secondary-hover);
+}
+
+.chat-list-item .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background-color: var(--accent-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--accent-primary);
+    flex-shrink: 0;
+}
+.chat-list-item .chat-info {
+    flex-grow: 1;
+    overflow: hidden;
+}
+.chat-list-item h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.chat-list-item p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.chat-list-item .chat-timestamp {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    align-self: flex-start;
+    flex-shrink: 0;
+}
+
+/* Request-specific styles */
+.chat-list-item[data-request-id] p {
+    font-style: italic;
+}
+.chat-list-item .request-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+.chat-list-item .btn-icon {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background-color: var(--accent-secondary);
+    color: var(--text-primary);
+}
+.chat-list-item .btn-icon:hover {
+    background-color: var(--accent-secondary-hover);
+}
+.chat-list-item .btn-icon.accept:hover {
+    background-color: color-mix(in srgb, var(--success) 20%, transparent);
+    color: var(--success);
+}
+.chat-list-item .btn-icon.reject:hover {
+    background-color: color-mix(in srgb, var(--error) 20%, transparent);
+    color: var(--error);
+}
+
+
+/* 4. Column 3: Main Chat Area
+   ----------------------------- */
+.chat-main {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    position: relative; /* For children positioning */
+}
+
+/* Placeholder (no chat selected) */
+.chat-main-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    color: var(--text-secondary);
+    /* Animation */
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+.chat-main-placeholder .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--text-placeholder);
+}
+.chat-main-placeholder .logo i {
+    width: 48px;
+    height: 48px;
+}
+.chat-main-placeholder .logo h1 {
+    font-size: 3rem;
+    font-weight: 700;
+}
+.chat-main-placeholder p {
+    font-size: 1rem;
+    margin-top: 1rem;
+}
+
+/* When placeholder is hidden (chat active) */
+.chat-main-placeholder.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Main Message Area (shown when chat active) */
+.chat-message-area,
+.chat-request-area {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background-color: var(--bg-secondary);
+    /* Animation */
+    opacity: 0;
+    transform: scale(0.98);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.chat-message-area.active,
+.chat-request-area.active {
+    display: flex;
+    opacity: 1;
+    transform: scale(1);
+}
+
+.chat-main-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 4rem 1rem 1.5rem; 
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+.chat-main-header h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    flex-grow: 1;
+}
+.chat-back-btn {
+    display: none; /* Hidden by default, shown on mobile */
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    border-radius: 50%;
+    cursor: pointer;
+    color: var(--text-primary);
+    transition: background-color 0.3s ease;
+}
+.chat-back-btn:hover {
+    background-color: var(--accent-secondary);
+}
+.chat-back-btn i {
+    width: 20px;
+    height: 20px;
+}
+
+.chat-crypto-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background-color: var(--accent-secondary);
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+}
+.chat-crypto-info i {
+    width: 14px;
+    height: 14px;
+}
+#chat-decrypt-btn {
+    width: auto;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+}
+#chat-decrypt-btn i {
+    width: 16px;
+    height: 16px;
+}
+/* Style for "Encrypted" state */
+#chat-decrypt-btn.encrypted {
+    background-color: var(--accent-secondary);
+    color: var(--text-primary);
+}
+#chat-decrypt-btn.encrypted:hover {
+    background-color: var(--accent-secondary-hover);
+}
+/* Style for "Decrypted" state */
+#chat-decrypt-btn.decrypted {
+    background-color: color-mix(in srgb, var(--success) 20%, transparent);
+    color: var(--success);
+}
+#chat-decrypt-btn.decrypted:hover {
+    background-color: color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+
+/* Message Container */
+.chat-messages-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Chat Message Bubble */
+.chat-message {
+    display: flex;
+    max-width: 75%;
+    animation: slide-in 0.3s ease-out;
+}
+.chat-message-content {
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    word-break: break-word; /* Break long encrypted strings */
+}
+
+/* Sent Message (align right) */
+.chat-message.sent {
+    align-self: flex-end;
+}
+.chat-message.sent .chat-message-content {
+    background-color: var(--accent-primary);
+    color: var(--text-on-accent);
+    border-bottom-right-radius: 4px;
+}
+.chat-message.sent .chat-message-content.decrypted {
+    background-color: var(--accent-hover);
+}
+
+/* Received Message (align left) */
+.chat-message.received {
+    align-self: flex-start;
+}
+.chat-message.received .chat-message-content {
+    background-color: var(--accent-secondary);
+    color: var(--text-primary);
+    border-bottom-left-radius: 4px;
+}
+.chat-message.received .chat-message-content.decrypted {
+    background-color: var(--bg-primary);
+}
+
+/* File Message (Button) */
+.chat-message-file-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: var(--font-family);
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-decoration: none;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    background-color: rgba(0,0,0,0.1); /* Slightly darker on sent */
+    color: inherit; /* Inherits from parent bubble */
+    transition: background-color 0.3s ease;
+}
+.chat-message.sent .chat-message-file-btn:hover {
+    background-color: rgba(0,0,0,0.2);
+}
+.chat-message.received .chat-message-file-btn {
+    background-color: rgba(255,255,255,0.4);
+}
+.chat-message.received .chat-message-file-btn:hover {
+    background-color: rgba(255,255,255,0.6);
+}
+.chat-message-file-btn i {
+    width: 20px;
+    height: 20px;
+}
+
+
+/* Message Form */
+.chat-message-form-container {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
+}
+.chat-message-form {
+    display: flex;
+    align-items: flex-end; /* Align to bottom for multiline textarea */
+    gap: 0.75rem;
+}
+.chat-message-form .btn-icon {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    background-color: var(--accent-secondary);
+    color: var(--text-primary);
+}
+.chat-message-form .btn-icon:hover {
+    background-color: var(--accent-secondary-hover);
+}
+.chat-message-form #chat-send-btn {
+    background-color: var(--accent-primary);
+    color: var(--text-on-accent);
+}
+.chat-message-form #chat-send-btn:hover {
+    background-color: var(--accent-hover);
+}
+
+.chat-message-form textarea {
+    flex-grow: 1;
+    font-family: var(--font-family);
+    font-size: 0.95rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    border-radius: 8px;
+    resize: none;
+    max-height: 120px; /* Limit height */
+    overflow-y: auto;
+}
+.chat-message-form textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+/* Chat Request Form */
+.chat-request-form {
+    padding: 1.5rem;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+.chat-request-form p {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 1.5rem;
+}
+.chat-request-form p strong {
+    color: var(--text-primary);
+    font-weight: 600;
+}
+.chat-request-form .btn-primary {
+    margin-top: 1.5rem;
+    width: auto;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
+
+
+/* 5. Sub-Modal: Key Prompt
+   ----------------------------- */
+.chat-key-prompt {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1005;
+    border-radius: 16px; /* Match wrapper */
+
+    /* Hidden by default */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+.chat-key-prompt.visible {
+    opacity: 1;
+    visibility: visible;
+}
+.chat-key-prompt-content {
+    background-color: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 8px 32px 0 var(--shadow-color);
+    /* Animation */
+    transform: scale(0.95);
+    transition: transform 0.3s ease;
+}
+.chat-key-prompt.visible .chat-key-prompt-content {
+    transform: scale(1);
+}
+.chat-key-prompt-content h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+.chat-key-prompt-content p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
+.chat-key-prompt-content p strong {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+.chat-key-prompt-content .input-group {
+    margin-bottom: 1.5rem;
+}
+.chat-key-prompt-content input[type="password"] {
+    font-family: monospace; /* Good for keys */
+}
+.chat-key-prompt-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+.chat-key-prompt-actions .btn {
+    width: auto;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+}
+
+
+/* 6. Animations
+   ----------------------------- */
+@keyframes slide-in {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+
+/* 7. Responsive Design (Mobile)
+   ----------------------------- */
+@media (max-width: 768px) {
+    /* On mobile, stack the grid and hide modal in favor of wrapper */
+    .modal-overlay#chat-modal {
+        padding: 0;
+    }
+    .modal-overlay#chat-modal .chat-wrapper {
+        max-width: 100vw;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+        grid-template-columns: 1fr; /* Single column */
+        transform: none !important;
+    }
+    .modal-overlay#chat-modal .modal-close {
+        top: 0.75rem;
+        right: 0.75rem;
+    }
+
+    /* Hide Nav and Sidebar */
+    .chat-nav, .chat-sidebar {
+        display: none; /* Hide nav by default */
+    }
+    .chat-sidebar {
+        /* [JS HOOK] When .chat-wrapper.show-sidebar is added... */
+        display: none;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 998;
+        border-right: none;
+        animation: slide-in-left 0.3s ease;
+    }
+    .chat-wrapper.show-sidebar .chat-sidebar {
+        display: flex; /* Show the sidebar */
+    }
+
+    /* Main chat area is visible by default */
+    .chat-main {
+        position: relative;
+        z-index: 997;
+    }
+    /* [JS HOOK] When a chat is selected, it covers the sidebar */
+    .chat-main.chat-active {
+        display: flex;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 999; /* Above sidebar */
+        animation: slide-in-left 0.3s ease;
+    }
+    
+    /* We need to re-show the sidebar/nav selector */
+    .chat-wrapper:not(.chat-active) .chat-nav {
+        display: flex;
+        grid-row: 2 / 3; /* Put nav at the bottom */
+        flex-direction: row;
+        width: 100%;
+        padding: 0.5rem;
+        border-top: 1px solid var(--border-color);
+        border-right: none;
+        height: 65px; /* Fixed bottom nav height */
+    }
+    .chat-nav-header, .chat-nav-footer {
+        display: none; /* Hide header/footer on mobile nav */
+    }
+    .chat-nav-links {
+        flex-direction: row;
+        width: 100%;
+    }
+    .chat-nav-link {
+        flex-grow: 1;
+    }
+    .chat-notification-bubble {
+        top: 4px;
+        right: 50%;
+        transform: translateX(24px) scale(0);
+    }
+    .chat-notification-bubble.visible {
+        transform: translateX(24px) scale(1);
+    }
+
+    /* Re-jig the grid for mobile */
+    .modal-overlay#chat-modal .chat-wrapper {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr auto; /* Content | Nav */
+    }
+    /* Sidebar (now main view) takes up row 1 */
+    .chat-sidebar {
+        position: static;
+        display: flex;
+        grid-row: 1 / 2;
+    }
+    
+    /* Show back button in header to go from main-chat to sidebar */
+    .chat-back-btn {
+        display: flex;
+    }
+    .chat-main-header h2 {
+        font-size: 1.1rem; /* Smaller title */
+    }
+    .chat-crypto-info, #chat-decrypt-btn {
+        display: none; /* Hide crypto info/button on mobile header (too busy) */
+    }
+
+    /* Message bubbles smaller */
+    .chat-message {
+        max-width: 85%;
+    }
+    .chat-message-content {
+        font-size: 0.9rem;
+    }
+    .chat-message-form-container {
+        padding: 0.75rem;
+    }
+    .chat-message-form textarea {
+        font-size: 0.9rem;
+        padding: 0.65rem 1rem;
+    }
+    .chat-message-form .btn-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    /* Key prompt fills more screen */
+    .chat-key-prompt-content {
+        max-width: 90vw;
+        padding: 1.5rem;
+    }
+}
+
+@keyframes slide-in-left {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.chat-message-file-btn .loader {
+    width: 16px;
+    height: 16px;
+    border-width: 2px;
+    display: none; /* Hide by default */
+    margin-left: 0.5rem;
+}

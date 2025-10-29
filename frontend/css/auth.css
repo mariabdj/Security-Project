@@ -1,0 +1,220 @@
+/* ---
+   SSAD Auth Page Stylesheet (auth.css)
+   Contains only styles for the index.html page.
+   --- */
+
+/* 1. Auth Page Layout
+   ----------------------------- */
+
+/* This prevents scrolling on the auth page */
+html, body {
+    overflow: hidden;
+}
+
+.auth-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh; /* Dynamic viewport height */
+    padding: 2rem;
+    
+    /* Smoother, single background gradient */
+    background-image: radial-gradient(
+        ellipse at top, 
+        rgba(59, 130, 246, 0.15), 
+        transparent 60%
+      ),
+      radial-gradient(
+        ellipse at bottom, 
+        rgba(100, 116, 139, 0.1), 
+        transparent 70%
+      );
+}
+
+.auth-card {
+    perspective: 1500px;
+    width: 100%;
+    max-width: 420px;
+    background-color: transparent;
+    /* Let the inner content define the height */
+}
+
+.auth-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    /* This allows the card to flip */
+    transform-style: preserve-3d;
+    transition: transform 0.8s cubic-bezier(0.76, 0, 0.24, 1);
+    /* Set min-height here so container has a size */
+    min-height: 500px; 
+}
+
+/* This is the JS hook that performs the flip */
+.auth-card.is-flipped .auth-card-inner {
+    transform: rotateY(180deg);
+}
+
+.auth-card-face {
+    /* FIXED: Re-instated position: absolute */
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    
+    /* Glassmorphism Effect */
+    background-color: var(--bg-glass);
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    border: 1px solid var(--bg-glass-border);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px 0 var(--shadow-color);
+    
+    padding: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    
+    /* FIXED: Removed min-height to prevent scrolling */
+    /* min-height: 570px; */ 
+}
+
+.auth-card-face.auth-card-back {
+    /* Pre-rotate the back face */
+    transform: rotateY(180deg);
+}
+
+
+/* 2. Auth Form Specifics
+   ----------------------------- */
+
+.auth-form h2 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.auth-form .auth-subtitle {
+    font-size: 0.95rem;
+    text-align: center;
+    margin-bottom: 2rem;
+    color: var(--text-secondary);
+}
+
+.flip-link {
+    font-size: 0.9rem;
+    text-align: center;
+    margin-top: 1.5rem;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.flip-link span {
+    font-weight: 600;
+    color: var(--accent-primary);
+    transition: color 0.3s ease;
+}
+
+.flip-link:hover span {
+    color: var(--accent-hover);
+    text-decoration: underline;
+}
+
+
+/* 3. Password Generator
+   ----------------------------- */
+
+.password-gen-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+}
+
+.password-gen-group {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.password-gen-group select {
+    flex-grow: 1;
+    font-size: 0.9rem;
+    padding: 0.85rem 1rem; /* Matched input padding */
+    padding-right: 2.5rem; /* Keep space for arrow */
+}
+
+.password-gen-group .btn-secondary {
+    width: auto;
+    flex-shrink: 0;
+    padding: 0.85rem 1rem; /* Matched input padding */
+    font-size: 0.9rem;
+}
+
+/* 4. Responsive Design (Auth)
+   ----------------------------- */
+@media (max-width: 480px) {
+    /* Allow scrolling on mobile if content is too tall */
+    html, body {
+        overflow: auto;
+    }
+
+    .auth-container {
+        padding: 1rem;
+        align-items: flex-start; /* Align to top on mobile */
+        padding-top: 3rem;
+        /* Disable full height on mobile */
+        min-height: 0; 
+    }
+
+    .auth-card-inner {
+        position: static; /* Disable absolute positioning */
+        min-height: 0;
+        transform-style: flat;
+    }
+    
+    .auth-card-face {
+        position: static; /* Disable absolute positioning */
+        padding: 2rem 1.5rem;
+        transform: none !important; /* Disable all transforms */
+    }
+
+    /* On mobile, we hide/show instead of flip */
+    .auth-card-face.auth-card-back {
+        display: none;
+    }
+
+    .auth-card.is-flipped .auth-card-face.auth-card-front {
+        display: none;
+    }
+    
+    .auth-card.is-flipped .auth-card-face.auth-card-back {
+        display: flex;
+    }
+
+    .auth-form h2 {
+        font-size: 1.5rem;
+    }
+
+    .password-gen-group {
+        flex-direction: column;
+    }
+    
+    .password-gen-group .btn-secondary {
+        width: 100%;
+    }
+}
+
+/* Responsive fix for card inner height */
+@media (max-width: 480px) and (min-height: 600px) {
+    .auth-container {
+        /* Re-center if screen is tall */
+        min-height: 100dvh;
+        align-items: center;
+        padding-top: 1rem;
+    }
+}

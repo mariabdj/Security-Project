@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSAD - Authentication</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+    <link rel="stylesheet" href="css/style.css">
+    
+    <link rel="stylesheet" href="css/auth.css">
+    
+    <script src="js/auth.js" defer></script>
+</head>
+<body>
+
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme" title="Toggle theme">
+        <i data-lucide="sun" class="icon-sun"></i>
+        <i data-lucide="moon" class="icon-moon"></i>
+    </button>
+
+    <div id="notification-container"></div>
+
+    <div class="auth-container">
+        <div class="auth-card" id="auth-card">
+            <div class="auth-card-inner">
+
+                <div class="auth-card-face auth-card-front">
+                    <form id="login-form" class="auth-form">
+                        <h2>Login to SSAD</h2>
+                        <p class="auth-subtitle">Welcome back to your secure framework.</p>
+                        
+                        <div class="input-group">
+                            <label for="login-username">Username</label>
+                            <input type="text" id="login-username" name="username" required>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" name="password" required>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" id="login-btn">
+                            <span>Login</span>
+                            <div class="loader"></div>
+                        </button>
+                        
+                        <p class="flip-link" id="show-signup">Don't have an account? <span>Sign Up</span></p>
+                    </form>
+                </div>
+
+                <div class="auth-card-face auth-card-back">
+                    <form id="signup-form" class="auth-form">
+                        <h2>Create Account</h2>
+                        <p class="auth-subtitle">Join the SSAD framework.</p>
+
+                        <div class="input-group">
+                            <label for="signup-username">Username</label>
+                            <input type="text" id="signup-username" name="username" required minlength="3">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="signup-password">Password</label>
+                            <input type="password" id="signup-password" name="password" required>
+                        </div>
+
+                        <label for="password-type" class="password-gen-label">Select password type:</label>
+                        <div class="password-gen-group">
+                            <select id="password-type" class="styled-select">
+                                <option value="1">Type 1: 3 chars [2,3,4]</option>
+                                <option value="2">Type 2: 5 chars [0-9]</option>
+                                <option value="3" selected>Type 3: 6 chars [Complex]</option>
+                            </select>
+                            <button type="button" class="btn btn-secondary" id="generate-pass-btn">
+                                <span>Generate</span>
+                                <div class="loader"></div>
+                            </button>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary" id="signup-btn">
+                            <span>Sign Up</span>
+                            <div class="loader"></div>
+                        </button>
+                        
+                        <p class="flip-link" id="show-login">Already have an account? <span>Login</span></p>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

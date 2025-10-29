@@ -1,0 +1,285 @@
+/* ---
+   SSAD Dashboard Page Stylesheet (dashboard.css)
+   --- */
+
+/* 1. Dashboard Layout & Header
+   ----------------------------- */
+
+body {
+    /* Allow scrolling on the main dashboard */
+    overflow-y: auto;
+}
+
+.dashboard-header {
+    width: 100%;
+padding: 1.5rem 6rem 1.5rem 2.5rem; /* Top, Right, Bottom, Left */    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 900;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--text-primary);
+}
+.logo i {
+    width: 28px;
+    height: 28px;
+    color: var(--accent-primary);
+}
+.logo h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.user-menu {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+.user-menu span {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.btn-logout {
+    width: auto; /* Override btn's 100% width */
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+}
+.btn-logout i {
+    width: 16px;
+    height: 16px;
+}
+
+
+/* 2. Feature Card Grid
+   ----------------------------- */
+
+.dashboard-grid {
+    padding: 3rem 2.5rem;
+}
+
+.feature-card-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.feature-card {
+    /* Reset button styles */
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+
+    /* Card Glassmorphism */
+    background-color: var(--bg-glass);
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    border: 1px solid var(--bg-glass-border);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px 0 var(--shadow-color);
+    
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 36px 0 var(--shadow-color);
+}
+
+.feature-card .card-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Uses the --icon-color variable from the HTML */
+    background-color: color-mix(in srgb, var(--icon-color) 15%, transparent);
+    margin-bottom: 1.5rem;
+}
+.feature-card .card-icon i {
+    width: 28px;
+    height: 28px;
+    color: var(--icon-color);
+}
+
+.feature-card h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.feature-card p {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    flex-grow: 1; /* Pushes arrow to bottom */
+    margin-bottom: 1.5rem;
+}
+
+.feature-card .card-arrow {
+    align-self: flex-end;
+}
+.feature-card .card-arrow i {
+    width: 20px;
+    height: 20px;
+    color: var(--text-secondary);
+    transition: transform 0.3s ease;
+}
+
+.feature-card:hover .card-arrow i {
+    transform: translateX(5px);
+    color: var(--accent-primary);
+}
+
+
+/* 3. Modal System (Global)
+   ----------------------------- */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 1000;
+
+    /* Hidden by default */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background-color: var(--bg-secondary);
+    border-radius: 16px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 600px; /* Default modal size */
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+
+    /* Animation */
+    transform: scale(0.95) translateY(10px);
+    transition: transform 0.3s ease;
+}
+.modal-overlay.visible .modal-content {
+    transform: scale(1) translateY(0);
+}
+
+.modal-content.large {
+    max-width: 1000px;
+}
+
+.modal-content.fullscreen {
+    max-width: 95vw;
+    max-height: 95vh;
+}
+
+.modal-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    background-color: var(--accent-secondary);
+    color: var(--text-secondary);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+.modal-close:hover {
+    background-color: var(--accent-secondary-hover);
+    color: var(--text-primary);
+}
+.modal-close i {
+    width: 20px;
+    height: 20px;
+}
+
+.modal-header {
+    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.modal-header h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.modal-body {
+    /* Content styles go here */
+}
+
+
+/* 4. Responsive Design (Dashboard)
+   ----------------------------- */
+@media (max-width: 768px) {
+    .dashboard-header {
+        padding: 1rem 1.5rem;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .user-menu {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .user-menu span {
+        font-size: 0.85rem;
+    }
+    .dashboard-grid {
+        padding: 2rem 1.5rem;
+    }
+    .feature-card-container {
+        grid-template-columns: 1fr; /* Stack cards on mobile */
+        gap: 1rem;
+    }
+    .modal-content {
+        padding: 1.5rem;
+    }
+    .modal-header h2 {
+        font-size: 1.25rem;
+    }
+}
+

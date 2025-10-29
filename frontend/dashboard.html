@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSAD - Dashboard</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+
+    <link rel="stylesheet" href="css/style.css">
+
+    <link rel="stylesheet" href="css/dashboard.css">
+
+    <link rel="stylesheet" href="css/visualize.css">
+    
+    <link rel="stylesheet" href="css/attacks.css">
+    <link rel="stylesheet" href="css/steganography.css">
+
+
+
+    <link rel="stylesheet" href="css/chat.css">
+    <script src="js/chat.js" defer></script>
+
+    <script src="js/main.js" defer></script>
+    <script src="js/dashboard.js" defer></script>
+    
+    <script src="js/crypto_viz.js" defer></script>
+    <script src="js/attacks.js" defer></script>
+    <script src="js/steganography.js" defer></script>
+
+</head>
+<body>
+
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme" title="Toggle theme">
+        <i data-lucide="sun" class="icon-sun"></i>
+        <i data-lucide="moon" class="icon-moon"></i>
+    </button>
+    <div id="notification-container"></div>
+    <header class="dashboard-header">
+        <div class="logo">
+            <i data-lucide="shield-check"></i>
+            <h1>SSAD</h1>
+        </div>
+        <div class="user-menu">
+            <span id="welcome-message">Welcome, user...</span>
+            <button id="logout-btn" class="btn btn-secondary btn-logout">
+                <i data-lucide="log-out"></i>
+                <span>Logout</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="dashboard-grid">
+
+        <div class="feature-card-container">
+            <button class="feature-card" id="open-chat-modal">
+                <div class="card-icon" style="--icon-color: #3b82f6;">
+                    <i data-lucide="message-circle"></i>
+                </div>
+                <h2>Secure Chat</h2>
+                <p>Send encrypted messages and files to other users.</p>
+                <div class="card-arrow">
+                    <i data-lucide="arrow-right"></i>
+                </div>
+            </button>
+
+            <button class="feature-card" id="open-visualize-modal">
+                <div class="card-icon" style="--icon-color: #8b5cf6;">
+                    <i data-lucide="play-circle"></i>
+                </div>
+                <h2>Cipher Visualization</h2>
+                <p>See step-by-step animated breakdowns of each algorithm.</p>
+                <div class="card-arrow">
+                    <i data-lucide="arrow-right"></i>
+                </div>
+            </button>
+
+            <button class="feature-card" id="open-attacks-modal">
+                <div class="card-icon" style="--icon-color: #ec4899;">
+                    <i data-lucide="swords"></i>
+                </div>
+                <h2>Attack Simulation</h2>
+                <p>Run Dictionary, Brute Force, and MiTM attack simulations.</p>
+                <div class="card-arrow">
+                    <i data-lucide="arrow-right"></i>
+                </div>
+            </button>
+
+            <button class="feature-card" id="open-stego-modal">
+                <div class="card-icon" style="--icon-color: #10b981;">
+                    <i data-lucide="file-image"></i>
+                </div>
+                <h2>Steganography</h2>
+                <p>Hide secret text in images, audio, or video files.</p>
+                <div class="card-arrow">
+                    <i data-lucide="arrow-right"></i>
+                </div>
+            </button>
+        </div>
+        </main>
+
+
+    <div class="modal-overlay" id="chat-modal">
+    <div class="chat-wrapper">
+        <button class="modal-close" data-modal-id="chat-modal"><i data-lucide="x"></i></button>
+
+        <nav class="chat-nav">
+            <div class="chat-nav-header">
+                <div class="logo">
+                    <i data-lucide="shield-check"></i>
+                </div>
+                <span id="chat-current-username" class="chat-username-display">...</span>
+            </div>
+            <div class="chat-nav-links">
+                <button class="chat-nav-link active" id="chat-nav-chats" data-panel="chats">
+                    <i data-lucide="message-circle"></i>
+                    <span>My Chats</span>
+                </button>
+                <button class="chat-nav-link" id="chat-nav-requests" data-panel="requests">
+                    <i data-lucide="user-plus"></i>
+                    <span>Chat Requests</span>
+                    <span class="chat-notification-bubble" id="chat-requests-count" style="display: none;">0</span>
+                </button>
+                <button class="chat-nav-link" id="chat-nav-search" data-panel="search">
+                    <i data-lucide="search"></i>
+                    <span>New Chat</span>
+                </button>
+            </div>
+            </nav>
+
+        <aside class="chat-sidebar" id="chat-sidebar">
+            
+            <div class="chat-sidebar-panel active" id="chat-panel-chats">
+                <div class="chat-sidebar-header">
+                    <h2>My Chats</h2>
+                </div>
+                <div class="chat-list-container" id="chat-list-container">
+                    <div class="chat-list-placeholder">
+                        <i data-lucide="message-circle"></i>
+                        <p>You have no active chats. Click "New Chat" to find a user.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-sidebar-panel" id="chat-panel-requests">
+                <div class="chat-sidebar-header">
+                    <h2>Chat Requests</h2>
+                </div>
+                <div class="chat-list-container" id="chat-requests-container">
+                    <div class="chat-list-placeholder">
+                        <i data-lucide="user-plus"></i>
+                        <p>You have no pending chat requests.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-sidebar-panel" id="chat-panel-search">
+                <div class="chat-sidebar-header">
+                    <h2>New Chat</h2>
+                </div>
+                <div class="chat-search-container">
+                    <div class="input-group">
+                        <i data-lucide="search" class="input-icon"></i>
+                        <input type="text" id="chat-search-input" placeholder="Search for a user...">
+                    </div>
+                </div>
+                <div class="chat-list-container" id="chat-search-results-container">
+                    <div class="chat-list-placeholder">
+                        <i data-lucide="users"></i>
+                        <p>Search for users by their username.</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="chat-main" id="chat-main">
+            
+            <div class="chat-main-placeholder" id="chat-main-placeholder">
+                <div class="logo">
+                    <i data-lucide="shield-check"></i>
+                    <h1>SSAD</h1>
+                </div>
+                <p>Select a chat to start messaging.</p>
+            </div>
+
+            <div class="chat-message-area" id="chat-message-area" style="display: none;">
+                <header class="chat-main-header">
+                    <button class="chat-back-btn" id="chat-back-btn"><i data-lucide="arrow-left"></i></button>
+                    <h2 id="chat-active-username"></h2>
+                    <div class="chat-crypto-info">
+                        <i id="chat-crypto-icon" data-lucide="lock"></i>
+                        <span id="chat-crypto-method"></span>
+                    </div>
+                    <button class="btn btn-secondary" id="chat-decrypt-btn">
+                        <i data-lucide="lock"></i>
+                        <span>Decrypt</span>
+                    </button>
+                </header>
+
+                <div class="chat-messages-container" id="chat-messages-container">
+                    </div>
+
+                <footer class="chat-message-form-container">
+                    <form class="chat-message-form" id="chat-message-form">
+                        <button type="button" class="btn-icon" id="chat-attach-file-btn" title="Send Steganography File">
+                            <i data-lucide="paperclip"></i>
+                        </button>
+                        <input type="file" id="chat-file-input" hidden>
+                        <textarea id="chat-message-input" placeholder="Type your encrypted message..." rows="1"></textarea>
+                        <button type="submit" class="btn-icon" id="chat-send-btn">
+                            <i data-lucide="send"></i>
+                            <div class="loader"></div>
+                        </button>
+                    </form>
+                </footer>
+            </div>
+
+            <div class="chat-request-area" id="chat-request-area" style="display: none;">
+                <header class="chat-main-header">
+                    <button class="chat-back-btn" id="chat-request-back-btn"><i data-lucide="arrow-left"></i></button>
+                    <h2>New Chat Request</h2>
+                </header>
+                <form class="chat-request-form" id="chat-request-form">
+                    <p>You are sending a chat request to: <strong id="chat-request-username">...</strong></p>
+                    <p>To start the chat, you must propose an encryption method and key that you will both use.</p>
+                    
+                    <div class="input-group">
+                        <label for="chat-request-method">Encryption Algorithm</label>
+                        <select id="chat-request-method" class="styled-select">
+                            <option value="">-- Select an algorithm --</option>
+                            <option value="caesar">Caesar</option>
+                            <option value="playfair">Playfair</option>
+                            <option value="hill">Hill</option>
+                            </select>
+                    </div>
+
+                    <div class="input-group" id="chat-request-shift-group" style="display: none;">
+                        <label for="chat-request-shift">Shift (e.g., 5 or -3)</label>
+                        <input type="number" id="chat-request-shift" placeholder="Enter shift value">
+                    </div>
+                    <div class="input-group" id="chat-request-key-group" style="display: none;">
+                        <label for="chat-request-key">Key (e.g., "KEYWORD" or "GYBN")</label>
+                        <input type="text" id="chat-request-key" placeholder="Enter keyword/key string">
+                    </div>
+                    <div class="input-group" id="chat-request-size-group" style="display: none;">
+                        <label for="chat-request-size">Hill Matrix Size (e.g., 2 or 3)</label>
+                        <input type="number" id="chat-request-size" value="2" min="2" max="3">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="chat-send-request-btn">
+                        <i data-lucide="send"></i>
+                        <span>Send Request</span>
+                        <div class="loader"></div>
+                    </button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <div class="chat-key-prompt" id="chat-key-prompt">
+        <div class="chat-key-prompt-content">
+            <h3 id="chat-key-prompt-title">Enter Decryption Key</h3>
+            <p id="chat-key-prompt-desc">Enter the key for the <strong id="chat-key-prompt-method">...</strong> cipher to decrypt this conversation.</p>
+            <form id="chat-key-prompt-form">
+                <div class="input-group">
+                    <label for="chat-key-prompt-input">Key</label>
+                    <input type="password" id="chat-key-prompt-input" autocomplete="off">
+                </div>
+                <div class="chat-key-prompt-actions">
+                    <button type="button" class="btn btn-secondary" id="chat-key-prompt-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Decrypt</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+    <div class="modal-overlay" id="visualize-modal">
+        <div class="modal-content large">
+            <button class="modal-close" data-modal-id="visualize-modal"><i data-lucide="x"></i></button>
+            <div class="modal-header"><h2>Cipher Visualization</h2></div>
+            <div class="modal-body viz-modal-body">
+                <div class="viz-tabs">
+                    <button class="viz-tab active" data-tab="simple">Simple View</button>
+                    <button class="viz-tab" data-tab="animated">Animated View</button>
+                </div>
+                <div class="viz-content">
+
+                    <div class="viz-tab-panel active" id="viz-tab-simple">
+                        <p class="viz-description">Get a quick encryption/decryption result from the backend.</p>
+                        <form class="viz-form" id="viz-simple-form">
+                            <div class="viz-form-column">
+                                <div class="input-group">
+                                    <label for="simple-text">Text</label>
+                                    <textarea id="simple-text" rows="4" placeholder="Enter plain text or cipher text..."></textarea>
+                                </div>
+                                <div class="input-group">
+                                    <label for="simple-method">Algorithm</label>
+                                    <select id="simple-method" class="styled-select">
+                                        <option value="caesar">Caesar</option>
+                                        <option value="playfair">Playfair</option>
+                                        <option value="hill">Hill</option>
+                                    </select>
+                                </div>
+                                <div class="input-group" id="simple-shift-group">
+                                    <label for="simple-shift">Shift (e.g., 5 or -3)</label>
+                                    <input type="number" id="simple-shift" value="3">
+                                </div>
+                                <div class="input-group" id="simple-key-group" style="display: none;">
+                                    <label for="simple-key">Key (e.g., "KEYWORD" or "GYBN")</label>
+                                    <input type="text" id="simple-key" placeholder="Enter keyword/key string">
+                                </div>
+                                <div class="input-group" id="simple-size-group" style="display: none;">
+                                    <label for="simple-size">Hill Matrix Size (e.g., 2 or 3)</label>
+                                    <input type="number" id="simple-size" value="2" min="2" max="3">
+                                </div>
+                                <div class="viz-form-actions">
+                                    <button type="submit" class="btn btn-primary" id="simple-encrypt-btn" data-action="encrypt">
+                                        <i data-lucide="lock"></i><span>Encrypt</span><div class="loader"></div>
+                                    </button>
+                                    <button type="submit" class="btn btn-secondary" id="simple-decrypt-btn" data-action="decrypt">
+                                        <i data-lucide="unlock"></i><span>Decrypt</span><div class="loader"></div>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="viz-form-column viz-results">
+                                <div class="input-group">
+                                    <label for="simple-result">Result</label>
+                                    <textarea id="simple-result" rows="10" readonly placeholder="Result will appear here..."></textarea>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="viz-tab-panel" id="viz-tab-animated">
+                        <div class="anim-view-container">
+                            <div class="anim-controls">
+                                <p class="viz-description">See a full, step-by-step animated breakdown of the encryption process.</p>
+                                <form id="viz-anim-form">
+                                    <div class="input-group">
+                                        <label for="anim-text">Text to Encrypt</label>
+                                        <input type="text" id="anim-text" value="HELLO">
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="anim-method">Algorithm</label>
+                                        <select id="anim-method" class="styled-select">
+                                            <option value="caesar">Caesar</option>
+                                            <option value="playfair">Playfair</option>
+                                            <option value="hill">Hill</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group" id="anim-shift-group">
+                                        <label for="anim-shift">Shift</label>
+                                        <input type="number" id="anim-shift" value="3">
+                                    </div>
+                                    <div class="input-group" id="anim-key-group" style="display: none;">
+                                        <label for="anim-key">Key (Playfair)</label>
+                                        <input type="text" id="anim-key" value="PLAYFAIREXAMPLE">
+                                    </div>
+                                    <div class="input-group" id="anim-size-group" style="display: none;">
+                                        <label for="anim-size">Hill Matrix Size (2 or 3)</label>
+                                        <input type="number" id="anim-size" value="2" min="2" max="3">
+                                        <label for="anim-key-hill" style="margin-top: 0.5rem;">Key (Hill - e.g., "GYBN" for size 2)</label>
+                                        <input type="text" id="anim-key-hill" value="GYBN">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary" id="start-anim-btn">
+                                        <i data-lucide="play"></i><span>Start Visualization</span><div class="loader"></div>
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="anim-player" id="anim-player" style="display: none;">
+                                <div class="anim-header">
+                                    <h3 id="anim-step-title">Step Title</h3>
+                                    <div class="anim-nav">
+                                        <span id="anim-step-counter">Step 1 / X</span>
+                                        <button class="btn btn-secondary btn-icon" id="anim-prev-btn" title="Previous Step"><i data-lucide="arrow-left"></i></button>
+                                        <button class="btn btn-secondary btn-icon" id="anim-next-btn" title="Next Step"><i data-lucide="arrow-right"></i></button>
+                                    </div>
+                                </div>
+                                <div class="anim-description" id="anim-step-description">Description...</div>
+                                <div class="anim-stage" id="anim-step-stage"></div>
+                            </div>
+                            <div classs="anim-player-placeholder" id="anim-player-placeholder">
+                                <i data-lucide="film"></i>
+                                <h3>Animation Player</h3>
+                                <p>Enter parameters and click "Start Visualization".</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="attacks-modal">
+    <div class="modal-content large"> <button class="modal-close" data-modal-id="attacks-modal"><i data-lucide="x"></i></button>
+        <div class="modal-header"><h2>Attack Simulation</h2></div>
+        
+        <div class="modal-body attack-modal-body">
+            <div class="viz-tabs attack-tabs">
+                <button class="viz-tab active" data-tab="bruteforce">Brute Force</button>
+                <button class="viz-tab" data-tab="dictionary">Dictionary</button>
+                <button class="viz-tab" data-tab="mitm">Man-in-the-Middle</button>
+            </div>
+
+            <div class="attack-setup-container" id="attack-setup-container">
+                <div class="viz-tab-panel active" id="attack-tab-bruteforce">
+                    <p class="viz-description">Simulate a brute-force attack against a user's password based on a known character set.</p>
+                    <form class="attack-form" id="attack-form-bruteforce">
+                        <div class="attack-form-section">
+                            <label>1. Select Target User</label>
+                            <div class="attack-search-box">
+                                <div class="input-group">
+                                    <i data-lucide="search" class="input-icon"></i>
+                                    <input type="text" id="bf-search-input" placeholder="Search for a 'victim'...">
+                                    <button type="button" class="input-clear-btn" id="bf-clear-btn" style="display: none;">
+                                        <i data-lucide="x"></i>
+                                    </button>
+                                </div>
+                                <div class="attack-search-results" id="bf-search-results">
+                                    </div>
+                            </div>
+                        </div>
+                        <div class="attack-form-section">
+                            <label for="bf-password-type">2. Select Password Type</label>
+                            <select id="bf-password-type" class="styled-select">
+                                <option value="type1">Type 1: 3 chars [2, 3, 4]</option>
+                                <option value="type2">Type 2: 5 chars [0-9]</option>
+                                <option value="type3">Type 3: 6 chars [Complex]</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="bf-start-btn" disabled>
+                            <i data-lucide="swords"></i><span>Start Attack</span><div class="loader"></div>
+                        </button>
+                    </form>
+                </div>
+
+                <div class="viz-tab-panel" id="attack-tab-dictionary">
+                    <p class="viz-description">Simulate a dictionary attack using a wordlist file (.txt) against a user's password.</p>
+                    <form class="attack-form" id="attack-form-dictionary">
+                        <div class="attack-form-section">
+                            <label>1. Select Target User</label>
+                            <div class="attack-search-box">
+                                <div class="input-group">
+                                    <i data-lucide="search" class="input-icon"></i>
+                                    <input type="text" id="dict-search-input" placeholder="Search for a 'victim'...">
+                                    <button type="button" class="input-clear-btn" id="dict-clear-btn" style="display: none;">
+                                        <i data-lucide="x"></i>
+                                    </button>
+                                </div>
+                                <div class="attack-search-results" id="dict-search-results">
+                                    </div>
+                            </div>
+                        </div>
+                        <div class="attack-form-section">
+                            <label for="dict-file-input">2. Upload Dictionary File (.txt)</label>
+                            <input type="file" id="dict-file-input" accept=".txt" hidden>
+                            <label for="dict-file-input" class="attack-file-label">
+                                <i data-lucide="file-up"></i>
+                                <span id="dict-file-name">Click to select a file...</span>
+                            </label>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="dict-start-btn" disabled>
+                            <i data-lucide="book-open"></i><span>Start Attack</span><div class="loader"></div>
+                        </button>
+                    </form>
+                </div>
+
+                <div class="viz-tab-panel" id="attack-tab-mitm">
+                    <div class="attack-placeholder">
+                        <i data-lucide="construction"></i>
+                        <h2>To be continued...</h2>
+                        <p>This simulation will be available once the live network capture is implemented.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="attack-simulation-stage" id="attack-simulation-stage" style="display: none;">
+                <h3 id="attack-anim-title">Running Brute Force Attack...</h3>
+                <div class="attack-anim-guess-box">
+                    <span>Current Guess:</span>
+                    <code id="attack-anim-guess">...</code>
+                </div>
+                <div class="attack-anim-progress-bar">
+                    <div id="attack-anim-progress"></div>
+                </div>
+                <div class="attack-anim-stats">
+                    <div class="attack-stat-card">
+                        <label>Attempts</label>
+                        <span id="attack-anim-attempts">0</span>
+                    </div>
+                    <div class="attack-stat-card">
+                        <label>Time Elapsed</label>
+                        <span id="attack-anim-time">0.00s</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="attack-results-container" id="attack-results-container" style="display: none;">
+                <div class="attack-result-header success" id="attack-result-header">
+                    <i data-lucide="check-circle"></i>
+                    <h2 id="attack-result-title">Password Found!</h2>
+                </div>
+                <div class="attack-result-password" id="attack-result-password-box" style="display: none;">
+                    <label>Password:</label>
+                    <code id="attack-result-password">12345</code>
+                </div>
+                <div class="attack-anim-stats" id="attack-result-stats">
+                    <div class="attack-stat-card">
+                        <label>Total Attempts</label>
+                        <span id="attack-result-attempts">1,234</span>
+                    </div>
+                    <div class="attack-stat-card">
+                        <label>Total Time</label>
+                        <span id="attack-result-time">0.02s</span>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" id="attack-reset-btn">
+                    <i data-lucide="rotate-ccw"></i><span>Run New Attack</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+   <div class="modal-overlay" id="stego-modal">
+    <div class="modal-content large"> <button class="modal-close" data-modal-id="stego-modal"><i data-lucide="x"></i></button>
+        <div class="modal-header"><h2>Steganography Tools</h2></div>
+        
+        <div class="modal-body stego-modal-body">
+            <div class="viz-tabs stego-tabs">
+                <button class="viz-tab active" data-tab="encode">Encode Message</button>
+                <button class="viz-tab" data-tab="decode">Decode Message</button>
+            </div>
+
+            <div class="stego-content">
+                
+                <p class="viz-description" id="stego-description">Hide a secret text message inside an image, audio (.wav), or video file.</p>
+
+                <div class="stego-file-type-selector">
+                    <label>Select File Type:</label>
+                    <div class="stego-radio-group">
+                        <label>
+                            <input type="radio" name="stegoFileType" value="image" checked>
+                            <i data-lucide="image"></i> Image
+                        </label>
+                        <label>
+                            <input type="radio" name="stegoFileType" value="audio">
+                            <i data-lucide="audio-lines"></i> Audio (.wav)
+                        </label>
+                        <label>
+                            <input type="radio" name="stegoFileType" value="video">
+                            <i data-lucide="video"></i> Video
+                        </label>
+                    </div>
+                </div>
+
+                <div class="stego-file-input-area">
+                    <input type="file" id="stego-file-input" accept="image/*" hidden>
+                    <label for="stego-file-input" class="attack-file-label stego-file-label">
+                        <i data-lucide="upload-cloud" id="stego-file-icon"></i>
+                        <span id="stego-file-name">Click to select file...</span>
+                    </label>
+                    <div id="stego-file-preview"></div> </div>
+
+                <div class="input-group" id="stego-secret-message-group">
+                    <label for="stego-secret-message">Secret Message to Hide</label>
+                    <textarea id="stego-secret-message" rows="4" placeholder="Enter the text you want to conceal..."></textarea>
+                </div>
+
+                <div class="stego-actions">
+                    <button class="btn btn-primary" id="stego-encode-btn">
+                        <i data-lucide="lock"></i><span>Encode & Download</span><div class="loader"></div>
+                    </button>
+                    <button class="btn btn-secondary" id="stego-decode-btn" style="display: none;">
+                        <i data-lucide="unlock"></i><span>Decode Message</span><div class="loader"></div>
+                    </button>
+                </div>
+
+                <div class="stego-results" id="stego-results-area" style="display: none;">
+                    <h4>Decoded Message:</h4>
+                    <pre id="stego-decoded-message">...</pre>
+                </div>
+                
+                <div class="stego-status" id="stego-status-message" style="display: none;"></div>
+
+            </div> </div> </div> </div>
+
+</body>
+</html>

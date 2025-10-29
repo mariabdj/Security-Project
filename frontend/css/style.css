@@ -1,0 +1,358 @@
+/* ---
+   SSAD Global Stylesheet (style.css)
+   Contains all shared styles: variables, globals, buttons, themes.
+   --- */
+
+/* 1. CSS Variables (Theming)
+   ----------------------------- */
+:root {
+    /* Default to Light Mode */
+    
+    /* Fonts */
+    --font-family: 'Inter', sans-serif;
+
+    /* Colors */
+    --bg-primary: #f8fafc; /* Slate 50 */
+    --bg-secondary: #ffffff; /* White */
+    --bg-glass: rgba(255, 255, 255, 0.6);
+    --bg-glass-border: rgba(0, 0, 0, 0.1);
+    --bg-input: #f1f5f9; /* Slate 100 */
+    
+    --text-primary: #0f172a; /* Slate 900 */
+    --text-secondary: #475569; /* Slate 600 */
+    --text-placeholder: #94a3b8; /* Slate 400 */
+    --text-on-accent: #ffffff;
+
+    --accent-primary: #3b82f6; /* Blue 500 */
+    --accent-hover: #2563eb; /* Blue 600 */
+    --accent-secondary: #e2e8f0; /* Slate 200 */
+    --accent-secondary-hover: #cbd5e1; /* Slate 300 */
+    
+    --border-color: #cbd5e1; /* Slate 300 */
+    
+    --shadow-color: rgba(0, 0, 0, 0.1);
+    
+    --success: #22c55e; /* Green 500 */
+    --error: #ef4444; /* Red 500 */
+    --text-on-notify: #ffffff;
+    
+    /* NEW: Custom select arrow color */
+    --select-arrow-color: var(--text-secondary);
+}
+
+html.dark {
+    /* Dark Mode Overrides */
+    
+    --bg-primary: #0f172a; /* Slate 900 */
+    --bg-secondary: #1e293b; /* Slate 800 */
+    --bg-glass: rgba(30, 41, 59, 0.7);
+    --bg-glass-border: rgba(255, 255, 255, 0.1);
+    --bg-input: #334155; /* Slate 700 */
+
+    --text-primary: #f1f5f9; /* Slate 100 */
+    --text-secondary: #94a3b8; /* Slate 400 */
+    --text-placeholder: #64748b; /* Slate 500 */
+    
+    --accent-primary: #3b82f6; /* Blue 500 */
+    --accent-hover: #60a5fa; /* Blue 400 */
+    --accent-secondary: #334155; /* Slate 700 */
+    --accent-secondary-hover: #475569; /* Slate 600 */
+    
+    --border-color: #475569; /* Slate 600 */
+
+    --shadow-color: rgba(0, 0, 0, 0.2);
+
+    /* NEW: Dark mode select arrow */
+    --select-arrow-color: var(--text-secondary);
+}
+
+/* 2. Global Styles
+   ----------------------------- */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    /* overflow-x: hidden; */ /* Removed, will be page-specific */
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* 3. Buttons & Loaders (Global)
+   ----------------------------- */
+
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    font-family: var(--font-family);
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 0.85rem 1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease, opacity 0.3s ease;
+    position: relative; /* For loader */
+}
+
+.btn-primary {
+    background-color: var(--accent-primary);
+    color: var(--text-on-accent);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-hover);
+}
+
+.btn-secondary {
+    background-color: var(--accent-secondary);
+    color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+    background-color: var(--accent-secondary-hover);
+}
+
+/* Button Loader */
+.loader {
+    display: none; /* Hidden by default */
+    width: 18px;
+    height: 18px;
+    border: 2px solid currentColor;
+    border-bottom-color: transparent;
+    border-radius: 50%;
+    animation: rotation 1s linear infinite;
+}
+
+.btn.loading span {
+    opacity: 0;
+}
+
+.btn.loading .loader {
+    display: block;
+    position: absolute;
+}
+
+@keyframes rotation {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 4. Form Inputs (Global)
+   ----------------------------- */
+.input-group {
+    margin-bottom: 1.25rem;
+}
+
+.input-group label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+}
+
+.input-group input,
+.input-group select,
+.styled-select /* NEW: Added class for select */
+{
+    width: 100%;
+    padding: 0.85rem 1rem;
+    font-size: 0.95rem;
+    font-family: var(--font-family);
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-input);
+    color: var(--text-primary);
+    border-radius: 8px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    -webkit-appearance: none; /* REQUIRED to hide default arrow */
+    -moz-appearance: none;
+    appearance: none;
+}
+
+/* NEW: Custom Arrow for <select> */
+.styled-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1em;
+    padding-right: 2.5rem; /* Make space for arrow */
+    /* This SVG is black by default. We can't color it here. */
+    /* For a color-changing arrow, we must use mask-image. */
+}
+
+/* NEW: Better custom arrow that respects theme colors.
+   We apply this to all <select> elements in an input group.
+*/
+.input-group select,
+.styled-select {
+    background-image: var(--select-arrow-svg);
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.2em;
+    padding-right: 2.5rem; /* Make space for arrow */
+
+    /* Define the SVG arrow using CSS variables so it's themeable */
+    --select-arrow-svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23${"var(--select-arrow-color)".substring(4, 10)}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    
+    /* Re-encode the arrow color for SVG URL */
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: %23${"var(--text-secondary)".substring(4, 10)};"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+}
+/* This is tricky. I will use a simple mask-image, it's cleaner */
+.input-group select,
+.styled-select {
+    background-color: var(--bg-input); /* Re-state for precedence */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1em;
+    color: var(--text-primary); /* Set text color */
+    
+    /* The simplest way to re-color a simple SVG is to just set
+      the 'color' attribute, which 'currentColor' in the SVG
+      will inherit. The SVG above uses 'currentColor'.
+      We need to set the color of the *arrow* itself.
+    */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+
+/* Dark mode select arrow */
+html.dark .input-group select,
+html.dark .styled-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+}
+/* --- End of select styling --- */
+
+
+.input-group input:focus,
+.input-group select:focus,
+.styled-select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+
+/* 5. Theme Toggle (Global)
+   ----------------------------- */
+.theme-toggle {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    z-index: 1000;
+    padding: 0;
+}
+
+.theme-toggle .icon-sun,
+.theme-toggle .icon-moon {
+    width: 20px;
+    height: 20px;
+    color: var(--text-primary);
+    position: absolute;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* Light mode (sun icon) */
+html:not(.dark) .theme-toggle .icon-moon {
+    transform: scale(0);
+    opacity: 0;
+}
+html:not(.dark) .theme-toggle .icon-sun {
+    transform: scale(1);
+    opacity: 1;
+}
+
+/* Dark mode (moon icon) */
+html.dark .theme-toggle .icon-sun {
+    transform: scale(0);
+    opacity: 0;
+}
+html.dark .theme-toggle .icon-moon {
+    transform: scale(1);
+    opacity: 1;
+}
+
+/* 6. Notification System (Global)
+   ----------------------------- */
+#notification-container {
+    position: fixed;
+    top: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    z-index: 9999;
+}
+
+.notification {
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-on-notify);
+    box-shadow: 0 4px 12px var(--shadow-color);
+    animation: slide-down 0.3s ease forwards,
+                 fade-out 0.5s ease 3.5s forwards;
+    opacity: 0;
+}
+
+.notification.success {
+    background-color: var(--success);
+}
+
+.notification.error {
+    background-color: var(--error);
+}
+
+@keyframes slide-down {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fade-out {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+/* 7. Responsive Design (Global)
+   ----------------------------- */
+@media (max-width: 480px) {
+    .theme-toggle {
+        top: 1rem;
+        right: 1rem;
+    }
+}

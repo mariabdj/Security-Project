@@ -1,0 +1,200 @@
+/* ---
+   SSAD Steganography Stylesheet (steganography.css)
+   --- */
+
+/* 1. Modal Body & Tab Layout */
+.stego-modal-body {
+    padding-top: 0;
+    min-height: 60vh;
+}
+.stego-tabs {
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 2.5rem;
+}
+.stego-content {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem; /* Consistent gap */
+}
+
+/* 2. File Type Selector */
+.stego-file-type-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.stego-file-type-selector label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+.stego-radio-group {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+.stego-radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+}
+.stego-radio-group label:hover {
+    background-color: var(--accent-secondary);
+}
+.stego-radio-group input[type="radio"] {
+    display: none; /* Hide default radio */
+}
+.stego-radio-group input[type="radio"]:checked + i {
+    color: var(--accent-primary);
+}
+.stego-radio-group input[type="radio"]:checked + i + span { /* Assuming span follows icon, adjust if needed */
+    /* No direct styling needed, rely on parent checked style */
+}
+.stego-radio-group label input[type="radio"]:checked ~ * { /* Select siblings */
+    color: var(--accent-primary);
+}
+
+.stego-radio-group input[type="radio"]:checked + label, /* Target label when checked */
+.stego-radio-group label:has(input[type="radio"]:checked) /* Modern CSS selector */
+{
+    border-color: var(--accent-primary);
+    background-color: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+    color: var(--accent-primary);
+    font-weight: 600;
+}
+.stego-radio-group i {
+    width: 18px;
+    height: 18px;
+    color: var(--text-secondary);
+    transition: color 0.3s ease;
+}
+
+/* 3. File Input & Preview */
+.stego-file-input-area {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+.stego-file-label {
+    /* Uses .attack-file-label styles from attacks.css */
+    /* Add specific overrides if needed */
+    justify-content: center; /* Center content */
+    min-height: 100px;
+    border-style: dashed;
+}
+.stego-file-label.file-selected {
+    border-color: var(--success); /* Use success color */
+    color: var(--success);
+}
+
+#stego-file-preview {
+    max-width: 100%;
+    max-height: 200px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: -0.5rem; /* Pull preview up slightly */
+}
+#stego-file-preview img,
+#stego-file-preview video,
+#stego-file-preview audio {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 8px;
+    object-fit: contain;
+    border: 1px solid var(--border-color);
+}
+#stego-file-preview audio {
+    width: 100%;
+    border: none;
+}
+
+/* 4. Secret Message & Actions */
+#stego-secret-message-group label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+#stego-secret-message {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.stego-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem; /* Add some space above buttons */
+}
+.stego-actions .btn {
+    width: auto;
+    padding: 0.8rem 1.75rem;
+}
+
+/* 5. Results & Status */
+.stego-results {
+    margin-top: 1rem;
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--bg-primary);
+}
+.stego-results h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+}
+#stego-decoded-message {
+    font-family: monospace;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-break: break-all;
+    background-color: var(--bg-secondary);
+    padding: 1rem;
+    border-radius: 4px;
+    min-height: 50px;
+}
+.stego-status {
+    margin-top: 1rem;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-align: center;
+}
+.stego-status.success {
+    background-color: color-mix(in srgb, var(--success) 15%, transparent);
+    color: var(--success);
+    border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+}
+.stego-status.error {
+    background-color: color-mix(in srgb, var(--error) 15%, transparent);
+    color: var(--error);
+    border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
+}
+
+/* 6. Responsive */
+@media (max-width: 600px) {
+    .stego-radio-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .stego-actions {
+        flex-direction: column;
+    }
+    .stego-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
