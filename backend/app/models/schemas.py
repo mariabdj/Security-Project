@@ -4,6 +4,8 @@ from pydantic import BaseModel
 from typing import Optional
 import uuid
 
+# --- Schémas Utilisateur & Auth (Inchangés) ---
+
 class UserCreate(BaseModel):
     username: str
     password: str
@@ -26,16 +28,14 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: Optional[str] = None
 
-# backend/app/models/schemas.py
-
-# ... (keep all your existing User/Token schemas) ...
-
-# --- NEW SCHEMAS FOR CHAT REQUESTS ---
+# --- Schémas Chat (Inchangés) ---
+# La structure 'encryption_params: dict' est déjà flexible
+# et gérera l'ajout de "size" pour Playfair sans modification.
 
 class ChatRequestCreate(BaseModel):
     receiver_id: uuid.UUID
     encryption_method: str
-    encryption_params: dict  # This will be a JSON object, e.g., {"key": 5}
+    encryption_params: dict  # e.g., {"shift": 5} or {"key": "KEY", "size": 5}
 
 class ChatRequest(BaseModel):
     id: uuid.UUID
@@ -46,19 +46,14 @@ class ChatRequest(BaseModel):
     encryption_params: dict
     
     class Config:
-        from_attributes = True # Pydantic v2
-
-# backend/app/models/schemas.py
-
-# ... (keep all your existing User/Token/ChatRequest/ChatRequestCreate schemas) ...
-
-# --- NEW SCHEMAS FOR MANAGING CHAT REQUESTS ---
+        from_attributes = True
 
 class ChatRequestDetails(BaseModel):
-    """A schema that includes the sender's username for display."""
     id: uuid.UUID
     sender_id: uuid.UUID
-    sender_username: str  # We will add this manually
+    receiver_id: uuid.UUID # [FIX de votre original]
+    sender_username: str
+    receiver_username: str # [FIX de votre original]
     status: str
     encryption_method: str
     encryption_params: dict
@@ -67,22 +62,15 @@ class ChatRequestDetails(BaseModel):
         from_attributes = True
 
 class ChatRequestUpdate(BaseModel):
-    """The simple payload for accepting or rejecting a request."""
-    status: str  # Will be "accepted" or "rejected"
+    status: str
 
-# backend/app/models/schemas.py
-
-# ... (keep all your existing schemas) ...
-
-# --- NEW SCHEMAS FOR MESSAGES ---
+# --- Schémas Messages (Inchangés) ---
 
 class MessageCreate(BaseModel):
-    """The content a user sends."""
     encrypted_content: str
-    content_type: str = "text" # e.g., "text", "steg_image_url"
+    content_type: str = "text" 
 
 class Message(BaseModel):
-    """The full message object returned from the database."""
     id: int
     chat_id: uuid.UUID
     sender_id: uuid.UUID
@@ -93,11 +81,7 @@ class Message(BaseModel):
     class Config:
         from_attributes = True
 
-# backend/app/models/schemas.py
-
-# ... (keep all your existing schemas) ...
-
-# --- NEW SCHEMAS FOR PASSWORDS & ATTACKS ---
+# --- Schémas Attaques (Inchangés) ---
 
 class GeneratedPassword(BaseModel):
     password_type: int
@@ -107,8 +91,8 @@ class AttackRequest(BaseModel):
     target_username: str
 
 class BruteForceRequest(AttackRequest):
-    charset_type: str # 'type1', 'type2', 'type3', 'numeric', 'alpha'
-    max_length: int = 8 # Default max length
+    charset_type: str 
+    max_length: int = 8 
 
 class AttackResult(BaseModel):
     found: bool
@@ -124,59 +108,40 @@ class MitmExplanation(BaseModel):
     solution: str
     demo: str
 
-# backend/app/models/schemas.py
-
-# ... (keep all your existing schemas) ...
-
-# --- NEW SCHEMA FOR FILE UPLOADS ---
+# --- Schémas Stockage (Inchangés) ---
 
 class FileUploadResponse(BaseModel):
     file_url: str
 
-# backend/app/models/schemas.py
-
-# ... (keep all your existing schemas) ...
-
-# --- NEW SCHEMAS FOR VISUALIZATION ---
-
-# backend/app/models/schemas.py
-
-# ... (keep other schemas) ...
+# --- [MODIFIÉ] Schémas Crypto & Visualisation ---
 
 class VisualizeRequest(BaseModel):
-    """The input for any visualization request."""
+    """L'entrée pour une demande de visualisation."""
     text: str
-    # Make all cipher-specific keys optional
-    key: Optional[str] = None # For Playfair and Hill
-    shift: Optional[int] = None # For Caesar
-    size: Optional[int] = None # For Hill
-
-# ... (keep other schemas) ...
+    key: Optional[str] = None     # Pour Playfair et Hill
+    shift: Optional[int] = None   # Pour Caesar
+    size: Optional[int] = None    # [MODIFIÉ] Pour Playfair (5 ou 6) et Hill (2 ou 3)
 
 class VisualizationStep(BaseModel):
-    """A generic step in a visualization process."""
+    """Une étape générique dans un processus de visualisation."""
     step_title: str
     description: str
-    data: dict # Flexible data for the frontend to render
+    data: dict 
 
 class VisualizationResponse(BaseModel):
-    """The full response containing all steps."""
+    """La réponse complète contenant toutes les étapes."""
     algorithm: str
     original_text: str
     final_text: str
     steps: list[VisualizationStep]
 
-# ... (all your other schemas)
-
-# --- NEW SCHEMAS FOR CRYPTO OPERATIONS ---
-
 class CryptoRequest(BaseModel):
+    """L'entrée pour une opération crypto simple."""
     text: str
     method: str  # 'caesar', 'playfair', 'hill'
     key: Optional[str] = None
     shift: Optional[int] = None
-    size: Optional[int] = None
+    size: Optional[int] = None    # [MODIFIÉ] Pour Playfair (5 ou 6) et Hill (2 ou 3)
 
 class CryptoResponse(BaseModel):
     result_text: str
-

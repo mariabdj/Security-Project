@@ -1,145 +1,207 @@
-# backend/app/security/crypto_algorithms/hill.py
 import numpy as np
-from typing import Optional
+import math
+import sys
+from typing import List, Optional, Dict # <- CORRECTION ICI
 
-# --- Helper Functions ---
+# --- Fonctions utilitaires pour la cryptographie (Mod 26) ---
 
-def char_to_num(char: str) -> int:
-    """Converts a character (A-Z) to a number (0-25)."""
-    return ord(char.upper()) - ord('A')
-
-def num_to_char(num: int) -> str:
-    """Converts a number (0-25) to a character (A-Z)."""
-    return chr((num % 26) + ord('A'))
-
-def mod_inv(a: int, m: int) -> Optional[int]:
-    """Finds the modular multiplicative inverse of a mod m."""
+def mod_inverse(a: int, m: int) -> Optional[int]:
+    """
+    Calcule l'inverse modulaire de 'a' modulo 'm'.
+    Nécessaire pour le déterminant lors du déchiffrement.
+    """
     a = a % m
     for x in range(1, m):
         if (a * x) % m == 1:
             return x
-    return None # No inverse exists
+    return None # Non inversible
 
-def create_key_matrix_from_string(key: str, size: int) -> Optional[np.ndarray]:
+def text_to_numbers(text: str) -> List[int]:
+    """Convertit une chaîne de caractères (nettoyée) en liste de nombres (A=0, Z=25)."""
+    text = text.upper()
+    numbers = []
+    for char in text:
+        if 'A' <= char <= 'Z':
+            numbers.append(ord(char) - ord('A'))
+    return numbers
+
+def numbers_to_text(numbers: List[int]) -> str:
+    """Convertit une liste de nombres en chaîne de caractères."""
+    text = ""
+    for num in numbers:
+        # np.round(num) est utilisé pour gérer les très petites erreurs de flottants
+        text += chr(int(round(num)) + ord('A'))
+    return text
+
+def get_key_matrix(key_string: str, d: int) -> np.ndarray:
+    """Crée la matrice clé et vérifie sa taille."""
+    numbers = text_to_numbers(key_string)
+    if len(numbers) != d * d:
+        raise ValueError(f"La clé doit contenir exactement {d*d} lettres pour une matrice {d}x{d}.")
+    
+    key_matrix = np.array(numbers).reshape(d, d)
+    return key_matrix
+
+# --- Fonctions pour le calcul de l'inverse modulaire ---
+
+def get_modular_inverse_matrix(matrix: np.ndarray, d: int) -> np.ndarray:
     """
-    Converts a key string (like "GYBN") and a size (like 2)
-    into a NumPy matrix (e.g., [[6, 24], [1, 13]]).
+    Calcule l'inverse de la matrice modulo 26.
+    Inclut la vérification d'inversibilité, solution à la Faible Clé.
     """
-    if not key.isalpha() or len(key) != size * size:
-        raise ValueError(f"Key must be {size*size} alphabetic characters.")
-        
-    nums = [char_to_num(char) for char in key]
-    matrix = np.array(nums).reshape(size, size)
-    return matrix
+    m = 26
+    
+    # Étape 1: Calcul du Déterminant Modulo 26
+    det = int(round(np.linalg.det(matrix))) % m
 
-def prepare_text(text: str, size: int) -> str:
-    """Prepares text by removing non-alpha, uppercasing, and padding."""
-    clean_text = "".join(filter(str.isalpha, text)).upper()
-    
-    # Pad with 'X' if length is not a multiple of size
-    remainder = len(clean_text) % size
-    if remainder != 0:
-        clean_text += "X" * (size - remainder)
-        
-    return clean_text
-
-def get_decryption_matrix(key_matrix: np.ndarray) -> np.ndarray:
-    """Calculates the modular inverse of the key matrix."""
-    size = key_matrix.shape[0]
-    
-    # 1. Calculate determinant
-    det = int(round(np.linalg.det(key_matrix)))
-    det_mod26 = det % 26
-    
-    # 2. Find modular inverse of determinant
-    det_inv = mod_inv(det_mod26, 26)
-    
+    # Étape 2: Calcul de l'Inverse Modulaire du Déterminant
+    det_inv = mod_inverse(det, m)
     if det_inv is None:
-        raise ValueError("Key matrix is not invertible (mod 26). GCD(det, 26) != 1.")
+        raise ValueError(
+            f"La matrice de clé n'est pas inversible mod 26. "
+            f"Déterminant = {det}. gcd({det}, 26) != 1. "
+            f"Chiffrement/Déchiffrement impossible."
+        )
+
+    # Étape 3: Calcul de la Matrice Adjointe (Adj(K))
+    if d == 2:
+        # Adj(K) pour 2x2: [[d, -b], [-c, a]]
+        a, b = matrix[0, 0], matrix[0, 1]
+        c, d_val = matrix[1, 0], matrix[1, 1]
+        adjugate_matrix = np.array([
+            [d_val, -b],
+            [-c, a]
+        ])
+    elif d == 3:
+        # Adj(K) pour 3x3: Matrice des cofacteurs transposée
+        cofactors = np.zeros((3, 3), dtype=int)
+        for i in range(3):
+            for j in range(3):
+                # Calcul du mineur (déterminant de la sous-matrice 2x2)
+                # np.delete supprime la ligne i et la colonne j
+                minor_matrix = np.delete(np.delete(matrix, i, axis=0), j, axis=1)
+                minor_det = int(round(np.linalg.det(minor_matrix)))
+                
+                # Le cofacteur Cij est (-1)^(i+j) * det(Mineur)
+                cofactor = ((-1)**(i + j)) * minor_det
+                cofactors[i, j] = cofactor
         
-    # 3. Calculate inverse matrix
-    inv_matrix = np.linalg.inv(key_matrix)
-    
-    # 4. Calculate adjugate * determinant
-    adjugate_det = inv_matrix * det
-    
-    # 5. Multiply by modular inverse of determinant and take mod 26
-    decryption_matrix = (adjugate_det * det_inv) % 26
-    
-    # Round to nearest integer and convert to int type
-    return np.round(decryption_matrix).astype(int)
+        # L'adjointe est la transposée de la matrice des cofacteurs
+        adjugate_matrix = cofactors.T
+    else:
+        # Seules les tailles 2x2 et 3x3 sont gérées ici.
+        raise ValueError("Taille de matrice non supportée pour l'inverse modulaire.")
 
+    # Étape 4: Calcul de K^(-1) = det_inv * Adj(K) mod 26
+    inverse_matrix = (det_inv * adjugate_matrix) % m
+    inverse_matrix = np.round(inverse_matrix).astype(int)
+    
+    # Correction des valeurs négatives si le modulo a laissé des -x
+    inverse_matrix[inverse_matrix < 0] += m
+    
+    return inverse_matrix
 
-# --- Core Functions ---
+# --- Fonctions pour l'affichage (Solution à la Faible Présentation) ---
+# Note: Celles-ci ne seront pas appelées par l'API, mais conservées pour la complétude.
+def print_matrix(title: str, matrix: np.ndarray):
+    """Affiche une matrice numpy avec un alignement propre."""
+    print(f"\n{title}:")
+    print("=" * (len(title) + 2))
+    rows, cols = matrix.shape
+    
+    max_width = 0
+    for r in range(rows):
+        for c in range(cols):
+            max_width = max(max_width, len(str(matrix[r, c])))
+
+    for r in range(rows):
+        row_str = "[ "
+        for c in range(cols):
+            row_str += str(matrix[r, c]).rjust(max_width) + " "
+        row_str += "]"
+        print(row_str)
+    print("=" * (len(title) + 2))
+
+# --- Fonctions principales du chiffrement de Hill ---
+
+def encrypt_hill(plaintext: str, key_matrix: np.ndarray, d: int) -> str:
+    """Processus de chiffrement avec gestion du bourrage."""
+    
+    # 1. Nettoyage du message
+    cleaned_text = "".join(c for c in plaintext.upper() if c.isalpha())
+    plain_numbers = text_to_numbers(cleaned_text)
+    
+    # 2. Gestion du Bourrage (Padding)
+    padding_char = 'X' 
+    padding_needed = d - (len(plain_numbers) % d) if len(plain_numbers) % d != 0 else 0
+    
+    if padding_needed > 0:
+        plain_numbers.extend([ord(padding_char) - ord('A')] * padding_needed)
+
+    ciphertext = []
+    
+    for i in range(0, len(plain_numbers), d):
+        block_numbers = np.array(plain_numbers[i:i+d])
+        encrypted_numbers = (key_matrix @ block_numbers) % 26
+        ciphertext.extend(encrypted_numbers.tolist())
+
+    return numbers_to_text(ciphertext)
+
+def decrypt_hill(ciphertext: str, key_matrix: np.ndarray, d: int) -> str:
+    """Processus de déchiffrement."""
+    
+    try:
+        inverse_key = get_modular_inverse_matrix(key_matrix, d)
+    except ValueError as e:
+        # Propager l'erreur si la clé n'est pas inversible
+        raise e
+
+    cipher_numbers = text_to_numbers(ciphertext)
+    plaintext_numbers = []
+
+    for i in range(0, len(cipher_numbers), d):
+        block_numbers = np.array(cipher_numbers[i:i+d])
+        decrypted_numbers = (inverse_key @ block_numbers) % 26
+        plaintext_numbers.extend(decrypted_numbers.tolist())
+
+    plaintext_full = numbers_to_text(plaintext_numbers)
+    
+    return plaintext_full
+
+# --- Fonctions Wrapper pour la compatibilité API ---
 
 def encrypt(plain_text: str, key: str, size: int) -> str:
-    """Encrypts text using the Hill cipher."""
+    """
+    Wrapper pour le chiffrement Hill.
+    Prend une chaîne de clé et une taille, crée la matrice et chiffre.
+    """
     try:
-        key_matrix = create_key_matrix_from_string(key, size)
-        # Check for invertibility before encrypting
-        get_decryption_matrix(key_matrix)
+        key_matrix = get_key_matrix(key, size)
+        # Vérification de l'inversibilité ici pour échouer tôt
+        get_modular_inverse_matrix(key_matrix, size) 
+        return encrypt_hill(plain_text, key_matrix, size)
     except ValueError as e:
-        raise ValueError(f"Invalid Key: {e}")
-        
-    text = prepare_text(plain_text, size)
-    cipher_text = ""
-    
-    for i in range(0, len(text), size):
-        # Get a block of text
-        block = text[i:i+size]
-        # Convert to vector (column matrix)
-        vector = np.array([char_to_num(char) for char in block]).reshape(size, 1)
-        
-        # Matrix multiplication
-        encrypted_vector = np.dot(key_matrix, vector)
-        
-        # Take mod 26
-        encrypted_vector_mod26 = encrypted_vector % 26
-        
-        # Convert back to chars
-        for num in encrypted_vector_mod26.flatten():
-            cipher_text += num_to_char(num)
-            
-    return cipher_text
+        # Transmettre l'erreur (par ex. clé non inversible) à l'API
+        raise e
 
 def decrypt(cipher_text: str, key: str, size: int) -> str:
-    """Decrypts text from the Hill cipher."""
-    try:
-        key_matrix = create_key_matrix_from_string(key, size)
-        decryption_matrix = get_decryption_matrix(key_matrix)
-    except ValueError as e:
-        raise ValueError(f"Invalid Key: {e}")
-
-    # Cipher text should already be padded
-    text = "".join(filter(str.isalpha, cipher_text)).upper()
-    plain_text = ""
-    
-    for i in range(0, len(text), size):
-        # Get a block of text
-        block = text[i:i+size]
-        # Convert to vector
-        vector = np.array([char_to_num(char) for char in block]).reshape(size, 1)
-        
-        # Matrix multiplication with decryption key
-        decrypted_vector = np.dot(decryption_matrix, vector)
-        
-        # Take mod 26
-        decrypted_vector_mod26 = decrypted_vector % 26
-        
-        # Convert back to chars
-        for num in decrypted_vector_mod26.flatten():
-            plain_text += num_to_char(num)
-            
-    return plain_text
-
-# --- Handling Security Flaws ---
-
-def get_flaws() -> dict:
     """
-    Returns the flaws of the Hill cipher and their solutions.
+    Wrapper pour le déchiffrement Hill.
+    Prend une chaîne de clé et une taille, crée la matrice et déchiffre.
+    """
+    try:
+        key_matrix = get_key_matrix(key, size)
+        return decrypt_hill(cipher_text, key_matrix, size)
+    except ValueError as e:
+        # Transmettre l'erreur (par ex. clé non inversible) à l'API
+        raise e
+
+def get_flaws() -> Dict[str, str]:
+    """
+    Fournit une analyse statique des failles pour l'API.
     """
     return {
-        "flaw": "Known-Plaintext Attack",
-        "description": "The Hill cipher is a linear cipher, meaning its encryption process is a set of linear equations. If an attacker knows a small amount of plaintext and its corresponding ciphertext (e.g., 'HELLO' encrypts to 'QWERT'), they can set up a system of linear equations to solve for the key matrix. For a 2x2 matrix, they only need 4 characters (2 digraphs) of known plaintext.",
-        "solution": "The linearity is the core weakness. This is solved by modern ciphers (like AES) which introduce non-linearity (e.g., S-boxes) and multiple rounds of substitution and permutation, making it impossible to solve for the key using simple linear algebra."
+        "flaw": "Attaque par Texte Clair Connu (Known-Plaintext Attack)",
+        "description": "Le chiffrement de Hill est linéaire. Si un attaquant connaît 'd*d' blocs de texte clair et leur chiffré correspondant (où 'd' est la taille de la matrice), il peut mettre en place un système d'équations linéaires pour résoudre et trouver la matrice clé. Pour une matrice 2x2, seulement 4 caractères (2 paires) sont nécessaires.",
+        "solution": "La faiblesse est la linéarité. Les chiffrements modernes comme AES introduisent de la non-linéarité (via les S-boxes) et des tours multiples pour empêcher ce type d'attaque algébrique."
     }

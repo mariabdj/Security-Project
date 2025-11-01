@@ -1,66 +1,79 @@
-# backend/app/security/crypto_algorithms/caesar.py
+from collections import Counter
+from typing import Dict, Any, Optional, List
+
+# --- Logique du nouveau fichier ---
+
+# Nettoyage du texte
+def nettoyer(texte: str) -> str:
+    texte = texte.upper()
+    return ''.join([c for c in texte if c.isalpha()])
+
+# Chiffrement César
+def cesar_chiffrer(texte: str, cle: int) -> str:
+    texte = nettoyer(texte)
+    if cle % 26 == 0:
+        return texte  # Pas de chiffrement
+    resultat = ""
+    for c in texte:
+        code = (ord(c) - ord('A') + cle) % 26
+        resultat += chr(ord('A') + code)
+    return resultat
+
+# Déchiffrement César
+def cesar_dechiffrer(texte: str, cle: int) -> str:
+    return cesar_chiffrer(texte, -cle)
+
+# Analyse des failles
+def get_flaws_cesar(cle: int, texte_clair: Optional[str] = None, texte_chiffre: Optional[str] = None) -> List[str]:
+    flaws = []
+
+    if cle in [0, 26]:
+        flaws.append("Clé 0 ou 26 : aucun chiffrement, texte en clair.")
+    if cle in [1, 3, 13]:
+        flaws.append(f"Clé {cle} : souvent testée en premier par les attaquants.")
+    if cle == 13:
+        flaws.append("Clé 13 : auto-inverse, même clé pour chiffrer et déchiffrer.")
+
+    if texte_clair and texte_chiffre:
+        try:
+            freq_clair = Counter(texte_clair)
+            freq_chiffre = Counter(texte_chiffre)
+            lettre_freq_clair = freq_clair.most_common(1)[0][0]
+            lettre_freq_chiffre = freq_chiffre.most_common(1)[0][0]
+            delta = (ord(lettre_freq_chiffre) - ord(lettre_freq_clair)) % 26
+            flaws.append(f"Analyse fréquentielle : lettre '{lettre_freq_clair}' → '{lettre_freq_chiffre}' ⇒ décalage probable de {delta}.")
+        except IndexError:
+            # Se produit si le texte est vide ou non alphabétique
+            pass
+
+    return flaws
+
+# --- Fonctions Wrapper pour la compatibilité API ---
+# Les endpoints API (crypto.py, visualize.py) appellent 'encrypt' et 'decrypt'
 
 def encrypt(plain_text: str, shift: int) -> str:
     """
-    Encrypts text using a Caesar cipher.
-    Handles 'shift Right-Left/ Left-Right by n rank' by accepting
-    a positive 'shift' (right) or negative 'shift' (left).
+    Wrapper pour le chiffrement César.
     """
     if not isinstance(shift, int):
-        raise ValueError("Shift key must be an integer.")
-
-    encrypted_text = ""
-    for char in plain_text:
-        if 'a' <= char <= 'z':
-            # Handle lowercase letters
-            new_ord = ord(char) + (shift % 26)
-            if new_ord > ord('z'):
-                new_ord -= 26
-            elif new_ord < ord('a'):
-                new_ord += 26
-            encrypted_text += chr(new_ord)
-        elif 'A' <= char <= 'Z':
-            # Handle uppercase letters
-            new_ord = ord(char) + (shift % 26)
-            if new_ord > ord('Z'):
-                new_ord -= 26
-            elif new_ord < ord('A'):
-                new_ord += 26
-            encrypted_text += chr(new_ord)
-        else:
-            # Non-alphabetic characters are not changed
-            encrypted_text += char
-            
-    return encrypted_text
+        raise ValueError("La clé (shift) doit être un entier.")
+    return cesar_chiffrer(plain_text, shift)
 
 def decrypt(cipher_text: str, shift: int) -> str:
     """
-    Decrypts text from a Caesar cipher.
-    This is just encryption with the opposite shift.
+    Wrapper pour le déchiffrement César.
     """
-    return encrypt(cipher_text, -shift)
+    if not isinstance(shift, int):
+        raise ValueError("La clé (shift) doit être un entier.")
+    return cesar_dechiffrer(cipher_text, shift)
 
-# --- Handling Security Flaws ---
-
-def get_flaws() -> dict:
+def get_flaws() -> Dict[str, str]:
     """
-    Returns the flaws of the Caesar cipher and their solutions.
+    Fournit une analyse statique des failles pour l'API (si nécessaire).
+    Pour une analyse dynamique, utilisez get_flaws_cesar.
     """
     return {
-        "flaw": "Brute-Force Attack",
-        "description": "The cipher only has 25 possible keys (shifts 1-25). An attacker can simply try all 25 decryptions and see which one produces readable text.",
-        "solution": "The Caesar cipher is fundamentally insecure for modern use. Its only solution is to use a stronger algorithm, like a polyalphabetic cipher (e.g., Vigenere) or a modern standard (e.g., AES). For this project, we acknowledge it is a 'toy' cipher."
+        "flaw": "Attaque par Force Brute & Analyse Fréquentielle",
+        "description": "Le chiffrement de César n'a que 25 clés possibles. Une attaque par force brute est triviale. De plus, il préserve la fréquence des lettres (par exemple, 'E' devient 'H' avec une clé de 3), le rendant vulnérable à l'analyse fréquentielle.",
+        "solution": "Ne jamais utiliser ce chiffrement pour des données sensibles. Utiliser un chiffrement polyalphabétique (comme Vigenère) ou, mieux, un standard moderne (AES)."
     }
-
-def brute_force_attack(cipher_text: str) -> list:
-    """
-    Performs a brute-force attack on a Caesar cipher text.
-    Returns all 25 possible decryptions.
-    """
-    possible_decryptions = []
-    for shift in range(1, 26):
-        possible_decryptions.append({
-            "shift_key_used": shift,
-            "decrypted_text": decrypt(cipher_text, shift)
-        })
-    return possible_decryptions

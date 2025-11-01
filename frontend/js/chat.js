@@ -5,39 +5,26 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- STATE VARIABLES ---
-    let activeChatData = null; // Stores data of the currently open chat
-    let allChatRequests = []; // Caches all fetched chat requests
-    
-    // [FIX] This variable will now reset to {} on every page load,
-    // as we are no longer using sessionStorage.
-    let chatSessionKeys = {}; // { "chat-id": "decryption_key" }
-    
+    let activeChatData = null; 
+    let allChatRequests = []; 
+    let chatSessionKeys = {}; 
     let searchDebounceTimer = null;
     let activeChatState = { id: null, isDecrypted: false };
     let messagePollInterval = null;
-
     let currentUserId = '';
+    
     try {
         currentUserId = JSON.parse(atob(TOKEN.split('.')[1])).sub;
     } catch (e) { 
         console.error("Could not decode token:", e);
-        showNotification('Invalid session. Please log in again.', 'error');
-        // Call the global logoutUser function if it exists
-        if(typeof logoutUser === 'function') {
-            logoutUser();
-        } else {
-            // Fallback
-            localStorage.clear();
-            sessionStorage.clear();
-            window.location.href = 'index.html';
-        }
+        if(typeof logoutUser === 'function') logoutUser();
+        else window.location.href = 'index.html';
     }
 
     // --- ELEMENT SELECTORS ---
     const chatModal = document.getElementById('chat-modal');
-    if (!chatModal) {
-        return;
-    }
+    if (!chatModal) return;
+    
     const openChatBtn = document.getElementById('open-chat-modal');
     const chatWrapper = chatModal.querySelector('.chat-wrapper');
     const chatNav = chatModal.querySelector('.chat-nav');
@@ -72,25 +59,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const reqMethod = document.getElementById('chat-request-method');
     const reqShiftGroup = document.getElementById('chat-request-shift-group');
     const reqKeyGroup = document.getElementById('chat-request-key-group');
-    const reqSizeGroup = document.getElementById('chat-request-size-group');
+    const reqSizeGroup = document.getElementById('chat-request-size-group'); // Hill
     const reqShiftInput = document.getElementById('chat-request-shift');
     const reqKeyInput = document.getElementById('chat-request-key');
-    const reqSizeInput = document.getElementById('chat-request-size');
-    const reqSendBtn = document.getElementById('chat-send-request-btn');
+    const reqSizeInput = document.getElementById('chat-request-size'); // Hill
+
+    // [NOUVEAU] Sélecteurs pour Playfair
+    const reqSizeGroupPlayfair = document.getElementById('chat-request-size-group-playfair');
+    const reqSizePlayfairInput = document.getElementById('chat-request-size-playfair');
+
     const keyPrompt = document.getElementById('chat-key-prompt');
     const keyPromptForm = document.getElementById('chat-key-prompt-form');
     const keyPromptCancel = document.getElementById('chat-key-prompt-cancel');
     const keyPromptMethod = document.getElementById('chat-key-prompt-method');
     const keyPromptInput = document.getElementById('chat-key-prompt-input');
 
-    // --- INITIALIZATION ---
-    // [FIX] Removed loadSessionKeys() and saveSessionKeys() functions.
-    // The keys are now only stored in the `chatSessionKeys` variable.
-
+    // --- INITIALIZATION & POLLING (Inchangés) ---
+    
     function stopMessagePolling() {
         if (messagePollInterval) clearInterval(messagePollInterval);
         messagePollInterval = null;
     }
+    
     function startMessagePolling(chatId) {
         stopMessagePolling(); 
         fetchMessages(chatId, false);
@@ -100,12 +90,11 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 stopMessagePolling();
             }
-        }, 3000);
+        }, 3000); // Poll every 3 seconds
     }
 
     async function initChatModal() {
-        // [FIX] No longer loading keys from sessionStorage.
-        // `chatSessionKeys` is guaranteed to be {} at this point.
+        chatSessionKeys = {}; // Réinitialiser les clés de session
         activeChatData = null;
         activeChatState = { id: null, isDecrypted: false };
         stopMessagePolling(); 
@@ -115,7 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
         await fetchAllChatData();
     }
 
-    // --- DATA FETCHING ---
+    // --- DATA FETCHING (Inchangé) ---
+    
     async function fetchAllChatData() {
         try {
             const response = await secureFetch('/chats/requests');
@@ -141,19 +131,15 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification(error.message, 'error');
         }
     }
-
+    
     async function fetchMessages(chatId, isPoll = false) {
         if (!chatId) return;
         try {
             const response = await secureFetch(`/chats/${chatId}/messages`);
             if (!response.ok) throw new Error('Failed to fetch messages.');
             const messages = await response.json();
-
             const existingMessageCount = msgContainer.querySelectorAll('.chat-message').length;
-            if (isPoll && messages.length === existingMessageCount) {
-                return; // No new messages
-            }
-
+            if (isPoll && messages.length === existingMessageCount) return;
             renderMessages(messages, activeChatData);
         } catch (error) {
             if (!isPoll) showNotification(error.message, 'error');
@@ -161,23 +147,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- UI RENDERING ---
+    // --- UI RENDERING (Fonctions de rendu inchangées) ---
+    
     function switchPanel(panelName) {
         sidebarPanels.forEach(p => p.classList.remove('active'));
         document.getElementById(`chat-panel-${panelName}`).classList.add('active');
         chatNavLinks.forEach(l => l.classList.remove('active'));
         document.getElementById(`chat-nav-${panelName}`).classList.add('active');
     }
-
+    
     function showMainPanel(panelName) {
-        if (panelName !== 'messages') {
-            stopMessagePolling();
-        }
+        if (panelName !== 'messages') stopMessagePolling();
         
         Object.values(mainPanels).forEach(p => {
             p.style.display = 'none';
             p.classList.remove('active');
         });
+        
         if (panelName === 'placeholder') {
             mainPanels.placeholder.style.display = 'flex';
         } else if (panelName === 'messages') {
@@ -187,29 +173,31 @@ document.addEventListener('DOMContentLoaded', () => {
             mainPanels.request.style.display = 'flex';
             mainPanels.request.classList.add('active');
         }
+        
+        // Gérer le placeholder
+        if (mainPanels.messages.classList.contains('active') || mainPanels.request.classList.contains('active')) {
+             mainPanels.placeholder.style.display = 'none';
+        } else {
+             mainPanels.placeholder.style.display = 'flex';
+        }
+        
         updateUIState();
     }
-
+    
     function renderChatList(chats) {
         chatListContainer.innerHTML = ''; 
         if (chats.length === 0) {
-            chatListContainer.innerHTML = `
-                <div class="chat-list-placeholder">
-                    <i data-lucide="message-circle"></i>
-                    <p>You have no active chats. Click "New Chat" to find a user.</p>
-                </div>`;
-            lucide.createIcons();
-            return;
+            chatListContainer.innerHTML = `<div class="chat-list-placeholder"><i data-lucide="message-circle"></i><p>You have no active chats. Click "New Chat" to find a user.</p></div>`;
+            lucide.createIcons(); return;
         }
-
         chats.forEach(chat => {
-            const displayName = chat.sender_username; 
+            const displayName = chat.sender_id === currentUserId ? chat.receiver_username : chat.sender_username;
             const avatarLetter = displayName.charAt(0).toUpperCase();
             const chatEl = document.createElement('button');
             chatEl.className = 'chat-list-item';
             chatEl.dataset.chatId = chat.id;
             chatEl.innerHTML = `
-                <div class="avatar" style="--avatar-color: #3b82f6;">${avatarLetter}</div>
+                <div class="avatar">${avatarLetter}</div>
                 <div class="chat-info">
                     <h3>${displayName}</h3>
                     <p>Encryption: ${chat.encryption_method}</p>
@@ -220,19 +208,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         lucide.createIcons();
     }
-
+    
     function renderRequestList(requests) {
         chatRequestsContainer.innerHTML = '';
         if (requests.length === 0) {
-            chatRequestsContainer.innerHTML = `
-                <div class="chat-list-placeholder">
-                    <i data-lucide="user-plus"></i>
-                    <p>You have no pending chat requests.</p>
-                </div>`;
-            lucide.createIcons();
-            return;
+            chatRequestsContainer.innerHTML = `<div class="chat-list-placeholder"><i data-lucide="user-plus"></i><p>You have no pending chat requests.</p></div>`;
+            lucide.createIcons(); return;
         }
-
         requests.forEach(req => {
             const avatarLetter = req.sender_username.charAt(0).toUpperCase();
             const reqEl = document.createElement('div');
@@ -249,31 +231,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="btn-icon reject" title="Reject"><i data-lucide="x"></i></button>
                 </div>
             `;
-            reqEl.querySelector('.accept').addEventListener('click', (e) => {
-                e.stopPropagation();
-                handleRespondToRequest(req.id, 'accepted');
-            });
-            reqEl.querySelector('.reject').addEventListener('click', (e) => {
-                e.stopPropagation();
-                handleRespondToRequest(req.id, 'rejected');
-            });
+            reqEl.querySelector('.accept').addEventListener('click', (e) => { e.stopPropagation(); handleRespondToRequest(req.id, 'accepted'); });
+            reqEl.querySelector('.reject').addEventListener('click', (e) => { e.stopPropagation(); handleRespondToRequest(req.id, 'rejected'); });
             chatRequestsContainer.appendChild(reqEl);
         });
         lucide.createIcons();
     }
-
+    
     function renderSearchResults(users) {
         chatSearchResultsContainer.innerHTML = '';
         if (users.length === 0) {
-            chatSearchResultsContainer.innerHTML = `
-                <div class="chat-list-placeholder">
-                    <i data-lucide="user-x"></i>
-                    <p>No users found matching that query.</p>
-                </div>`;
-            lucide.createIcons();
-            return;
+            chatSearchResultsContainer.innerHTML = `<div class="chat-list-placeholder"><i data-lucide="user-x"></i><p>No users found matching that query.</p></div>`;
+            lucide.createIcons(); return;
         }
-
         users.forEach(user => {
             const avatarLetter = user.username.charAt(0).toUpperCase();
             const userEl = document.createElement('button');
@@ -297,33 +267,23 @@ document.addEventListener('DOMContentLoaded', () => {
         msgContainer.innerHTML = '';
         if (!messages || messages.length === 0) {
             msgContainer.innerHTML = `<div class="chat-list-placeholder"><i data-lucide="messages-square"></i><p>This is the beginning of your secure conversation.</p></div>`;
-            lucide.createIcons();
-            return;
+            lucide.createIcons(); return;
         }
-        
         const shouldScroll = msgContainer.scrollTop + msgContainer.clientHeight >= msgContainer.scrollHeight - 50;
-        
-        messages.forEach(msg => {
-            renderSingleMessage(msg, chatData, false);
-        });
-        
-        if (shouldScroll) {
-            msgContainer.scrollTop = msgContainer.scrollHeight;
-        }
+        messages.forEach(msg => { renderSingleMessage(msg, chatData, false); });
+        if (shouldScroll) msgContainer.scrollTop = msgContainer.scrollHeight;
     }
-
+    
     function renderSingleMessage(message, chatData, isNew) {
         const isDecrypted = activeChatState.isDecrypted;
         const sessionKey = chatSessionKeys[chatData.id];
         const isSent = message.sender_id === currentUserId;
         const messageType = isSent ? 'sent' : 'received';
         let contentHtml = '';
-
         if (message.content_type === 'steg_file_link') {
             let filename = 'encrypted_file';
             let decryptedUrl = '#';
             let isLinkReady = false;
-
             if (isDecrypted && sessionKey) {
                 decryptedUrl = decryptMessage(message.encrypted_content, chatData, sessionKey);
                 try {
@@ -332,70 +292,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 } catch (e) { filename = 'downloaded_file'; }
                 isLinkReady = true;
             }
-            
-            contentHtml = `
-                <a class="chat-message-file-btn" 
-                   data-url="${isLinkReady ? decryptedUrl : ''}" 
-                   data-filename="${filename}" 
-                   title="${isLinkReady ? 'Click to download' : 'Decrypt chat to download'}">
-                    <i data-lucide="${isLinkReady ? 'download' : 'file-lock-2'}"></i>
-                    <span>${filename}</span>
-                    <div class="loader"></div>
-                </a>`;
-
+            contentHtml = `<a class="chat-message-file-btn" data-url="${isLinkReady ? decryptedUrl : ''}" data-filename="${filename}" title="${isLinkReady ? 'Click to download' : 'Decrypt chat to download'}"><i data-lucide="${isLinkReady ? 'download' : 'file-lock-2'}"></i><span>${filename}</span><div class="loader"></div></a>`;
         } else {
-            // It's a text message.
             if (isDecrypted && sessionKey) {
                 contentHtml = decryptMessage(message.encrypted_content, chatData, sessionKey);
             } else {
                 contentHtml = message.encrypted_content;
             }
         }
-        
         const msgEl = document.createElement('div');
         msgEl.className = `chat-message ${messageType}`;
-        msgEl.innerHTML = `
-            <div class="chat-message-content ${isDecrypted ? 'decrypted' : 'encrypted'}" 
-                 data-encrypted-text="${message.encrypted_content}"
-                 data-content-type="${message.content_type}">
-                ${contentHtml}
-            </div>`;
-
+        msgEl.innerHTML = `<div class="chat-message-content ${isDecrypted ? 'decrypted' : 'encrypted'}" data-encrypted-text="${message.encrypted_content}" data-content-type="${message.content_type}">${contentHtml}</div>`;
         msgContainer.appendChild(msgEl);
-        
         if (isNew) {
             msgEl.style.animation = 'slide-in 0.3s ease-out';
             msgContainer.scrollTop = msgContainer.scrollHeight;
         }
-        
         lucide.createIcons();
     }
-
+    
     function reRenderAllMessages() {
         if (!activeChatData) return;
-        
         const allMessageElements = Array.from(msgContainer.querySelectorAll('.chat-message-content'));
         const reconstructedMessages = allMessageElements.map(el => ({
             sender_id: el.parentElement.classList.contains('sent') ? currentUserId : 'other', 
             encrypted_content: el.dataset.encryptedText,
             content_type: el.dataset.contentType
         }));
-        
         renderMessages(reconstructedMessages, activeChatData);
     }
 
-    // --- CORE CHAT LOGIC ---
+    // --- CORE CHAT LOGIC (Partiellement modifié) ---
+    
     async function selectChat(chatData) {
         activeChatData = chatData;
         activeChatState = { id: chatData.id, isDecrypted: !!chatSessionKeys[chatData.id] };
         
-        const displayName = chatData.sender_username; 
+        const displayName = chatData.sender_id === currentUserId ? chatData.receiver_username : chatData.sender_username;
         msgHeaderUsername.textContent = `Chat with ${displayName}`;
         msgHeaderCryptoMethod.textContent = chatData.encryption_method;
         
         updateDecryptButtonState();
         showMainPanel('messages');
-        
         startMessagePolling(chatData.id);
     }
     
@@ -406,12 +344,10 @@ document.addEventListener('DOMContentLoaded', () => {
         reqForm.dataset.receiverId = user.id; 
         showMainPanel('request');
     }
-
+    
     function handleDecryptToggle() {
         if (!activeChatData) return;
-        
         const chatId = activeChatData.id;
-
         if (activeChatState.isDecrypted) {
             activeChatState.isDecrypted = false;
             updateDecryptButtonState();
@@ -428,7 +364,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showKeyPrompt(chatData) {
-        keyPromptMethod.textContent = chatData.encryption_method;
+        let methodDesc = chatData.encryption_method;
+        if (methodDesc === 'playfair') {
+            methodDesc += ` (${chatData.encryption_params.size}x${chatData.encryption_params.size})`;
+        } else if (methodDesc === 'hill') {
+            methodDesc += ` (${chatData.encryption_params.size}x${chatData.encryption_params.size})`;
+        }
+        keyPromptMethod.textContent = methodDesc;
         keyPrompt.classList.add('visible');
         keyPromptInput.focus();
         keyPrompt.dataset.chatId = chatData.id;
@@ -438,26 +380,19 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const chatId = keyPrompt.dataset.chatId;
         const key = keyPromptInput.value;
-        
         if (!key || !chatId) return;
-        
-        chatSessionKeys[chatId] = key; // Save key for this session
-        // [FIX] No longer saving to sessionStorage
-        
+        chatSessionKeys[chatId] = key; 
         activeChatState.isDecrypted = true; 
-        
         keyPrompt.classList.remove('visible');
         keyPromptInput.value = '';
-        
         updateDecryptButtonState();
-        reRenderAllMessages(); // Re-render
+        reRenderAllMessages(); 
     }
 
     function updateDecryptButtonState() {
         if (!msgDecryptBtn) return; 
         const btnIcon = msgDecryptBtn.querySelector('i');
         const btnText = msgDecryptBtn.querySelector('span');
-        
         if (activeChatState.isDecrypted) {
             msgDecryptBtn.classList.remove('encrypted');
             msgDecryptBtn.classList.add('decrypted');
@@ -476,26 +411,18 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const text = msgInput.value.trim();
         if (!text || !activeChatData) return;
-        
         const sessionKey = chatSessionKeys[activeChatData.id];
         if (!sessionKey) {
             showNotification('Please decrypt the chat once (by entering the key) to enable sending messages.', 'error');
             return;
         }
-
         setButtonLoading(msgSendBtn, true);
         try {
             const encryptedText = encryptMessage(text, activeChatData, sessionKey);
             const payload = { encrypted_content: encryptedText, content_type: 'text' };
-
-            const response = await secureFetch(`/chats/${activeChatData.id}/messages`, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
+            const response = await secureFetch(`/chats/${activeChatData.id}/messages`, { method: 'POST', body: JSON.stringify(payload) });
             if (!response.ok) throw new Error('Failed to send message.');
-            
             const newMessage = await response.json();
-            
             renderSingleMessage(newMessage, activeChatData, true);
             msgInput.value = '';
             msgInput.style.height = 'auto'; 
@@ -510,45 +437,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!activeChatData) return;
         const file = msgFileInput.files[0];
         if (!file) return;
-
         const sessionKey = chatSessionKeys[activeChatData.id];
         if (!sessionKey) {
             showNotification('Please decrypt the chat once (by entering the key) to enable sending files.', 'error');
             return;
         }
-        
         const formData = new FormData();
         formData.append('file', file);
-
         showNotification('Uploading file... this may take a moment.', 'success');
         setButtonLoading(msgSendBtn, true); 
-
         try {
-            const storageResponse = await secureFetch('/storage/upload', {
-                method: 'POST',
-                body: formData,
-                headers: { 'Content-Type': undefined }
-            });
-            
-            if (!storageResponse.ok) {
-                const errData = await storageResponse.json();
-                throw new Error(errData.detail || 'Failed to upload file to storage.');
-            }
+            const storageResponse = await secureFetch('/storage/upload', { method: 'POST', body: formData, headers: { 'Content-Type': undefined } });
+            if (!storageResponse.ok) { const errData = await storageResponse.json(); throw new Error(errData.detail || 'Failed to upload file to storage.'); }
             const storageData = await storageResponse.json();
             const fileUrl = storageData.file_url;
-
             const encryptedUrl = encryptMessage(fileUrl, activeChatData, sessionKey);
-            
             const payload = { encrypted_content: encryptedUrl, content_type: 'steg_file_link' };
-            const msgResponse = await secureFetch(`/chats/${activeChatData.id}/messages`, {
-                method: 'POST',
-                body: JSON.stringify(payload)
-            });
+            const msgResponse = await secureFetch(`/chats/${activeChatData.id}/messages`, { method: 'POST', body: JSON.stringify(payload) });
             if (!msgResponse.ok) throw new Error('Failed to send file message.');
-            
             const newMessage = await msgResponse.json();
             renderSingleMessage(newMessage, activeChatData, true);
-
         } catch (error) {
             showNotification(error.message, 'error');
         } finally {
@@ -560,22 +468,17 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handleFileDownload(e) {
         const button = e.target.closest('.chat-message-file-btn');
         if (!button) return;
-        
         const url = button.dataset.url;
         const filename = button.dataset.filename;
         const loader = button.querySelector('.loader');
-
         if (!url || url === '#') {
             showNotification('You must decrypt the chat to download files.', 'error');
             return;
         }
-
         loader.style.display = 'block';
-        
         try {
             const response = await secureFetch(url); 
             if (!response.ok) throw new Error('File not found or access denied.');
-            
             const blob = await response.blob();
             const objectUrl = URL.createObjectURL(blob);
             const tempLink = document.createElement('a');
@@ -583,32 +486,22 @@ document.addEventListener('DOMContentLoaded', () => {
             tempLink.download = filename;
             document.body.appendChild(tempLink);
             tempLink.click();
-            
             document.body.removeChild(tempLink);
             URL.revokeObjectURL(objectUrl);
-
         } catch (error) {
             showNotification(error.message, 'error');
         } finally {
             loader.style.display = 'none';
         }
     }
-
-
+    
     function handleSearchInput() {
         clearTimeout(searchDebounceTimer);
         const query = chatSearchInput.value.trim();
-        
         if (query.length < 2) {
-            chatSearchResultsContainer.innerHTML = `
-                <div class="chat-list-placeholder">
-                    <i data-lucide="users"></i>
-                    <p>Enter at least 2 characters to search.</p>
-                </div>`;
-            lucide.createIcons();
-            return;
+            chatSearchResultsContainer.innerHTML = `<div class="chat-list-placeholder"><i data-lucide="users"></i><p>Enter at least 2 characters to search.</p></div>`;
+            lucide.createIcons(); return;
         }
-
         searchDebounceTimer = setTimeout(async () => {
             try {
                 chatSearchResultsContainer.innerHTML = `<div class_name="loader-container" style="display:flex; justify-content:center; padding:2rem;"><div class="loader"></div></div>`;
@@ -623,6 +516,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 300);
     }
     
+    // [MODIFIÉ] Gérer l'envoi de la demande
     async function handleSendRequest(e) {
         e.preventDefault();
         setButtonLoading(reqSendBtn, true);
@@ -640,8 +534,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 key = String(shift); 
             } else if (method === 'playfair') {
                 key = reqKeyInput.value.trim().toUpperCase();
-                if (!key || !/^[A-Z]+$/.test(key)) throw new Error('Playfair key must be letters only.');
-                params = { key };
+                // [NOUVEAU] Récupérer la taille pour Playfair
+                const size = parseInt(reqSizePlayfairInput.value);
+                if (!key) throw new Error('Playfair key is required.');
+                if (![5, 6].includes(size)) throw new Error('Playfair size must be 5 or 6.');
+                // Validation côté client (basée sur la logique Python)
+                if (size === 6 && !/\d/.test(key)) throw new Error('Playfair 6x6 key must contain at least one digit.');
+                
+                params = { key, size }; // Envoyer la clé et la taille
             } else if (method === 'hill') {
                 key = reqKeyInput.value.trim().toUpperCase();
                 const size = parseInt(reqSizeInput.value);
@@ -669,8 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             showNotification('Chat request sent!', 'success');
             
-            chatSessionKeys[data.id] = key; // Save key for this new chat
-            // [FIX] No longer saving to sessionStorage
+            chatSessionKeys[data.id] = key; // Sauvegarder la clé (sans la taille, gérée par params)
             
             await fetchAllChatData(); 
             switchPanel('chats');
@@ -684,10 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function handleRespondToRequest(requestId, status) {
         try {
-            const response = await secureFetch(`/chats/requests/${requestId}`, {
-                method: 'PUT',
-                body: JSON.stringify({ status })
-            });
+            const response = await secureFetch(`/chats/requests/${requestId}`, { method: 'PUT', body: JSON.stringify({ status }) });
             if (!response.ok) throw new Error('Failed to respond to request.');
             
             if (status === 'accepted') {
@@ -715,7 +611,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- EVENT LISTENERS ---
+    // --- EVENT LISTENERS (Partiellement modifié) ---
+    
     openChatBtn.addEventListener('click', initChatModal);
 
     chatNavLinks.forEach(link => {
@@ -723,20 +620,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const panelName = link.dataset.panel;
             switchPanel(panelName);
             showMainPanel('placeholder');
-            if(panelName === 'search') {
-                chatSearchInput.focus();
-            }
+            if(panelName === 'search') chatSearchInput.focus();
         });
     });
 
     chatSearchInput.addEventListener('input', handleSearchInput);
-
     msgForm.addEventListener('submit', handleSendMessage);
     msgInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault(); 
-            handleSendMessage(e); 
-        }
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); }
     });
     msgInput.addEventListener('input', () => {
         msgInput.style.height = 'auto';
@@ -745,21 +636,26 @@ document.addEventListener('DOMContentLoaded', () => {
     
     msgAttachBtn.addEventListener('click', () => msgFileInput.click());
     msgFileInput.addEventListener('change', handleSendFile);
-
     msgContainer.addEventListener('click', handleFileDownload);
-
     msgDecryptBtn.addEventListener('click', handleDecryptToggle);
     reqForm.addEventListener('submit', handleSendRequest);
+
+    // [MODIFIÉ] Listener de changement de méthode de requête
     reqMethod.addEventListener('change', () => {
         const method = reqMethod.value;
         reqShiftGroup.style.display = 'none';
         reqKeyGroup.style.display = 'none';
-        reqSizeGroup.style.display = 'none';
-        if (method === 'caesar') reqShiftGroup.style.display = 'block';
-        else if (method === 'playfair') reqKeyGroup.style.display = 'block';
-        else if (method === 'hill') {
+        reqSizeGroup.style.display = 'none'; // Hill
+        reqSizeGroupPlayfair.style.display = 'none'; // Playfair
+        
+        if (method === 'caesar') {
+            reqShiftGroup.style.display = 'block';
+        } else if (method === 'playfair') { 
             reqKeyGroup.style.display = 'block';
-            reqSizeGroup.style.display = 'block';
+            reqSizeGroupPlayfair.style.display = 'block'; // Afficher la taille Playfair
+        } else if (method === 'hill') {
+            reqKeyGroup.style.display = 'block';
+            reqSizeGroup.style.display = 'block'; // Afficher la taille Hill
         }
     });
     
@@ -780,6 +676,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- [SECTION] CLIENT-SIDE CRYPTO IMPLEMENTATIONS ---
     // ---
     
+    // [MODIFIÉ] Fonctions wrapper pour passer 'size'
     function encryptMessage(text, chatData, key) {
         const { encryption_method, encryption_params } = chatData;
         try {
@@ -787,10 +684,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return caesarEncrypt(text, parseInt(key));
             }
             if (encryption_method === 'playfair') {
-                return playfairEncrypt(text, key);
+                return playfairEncrypt(text, key, parseInt(encryption_params.size));
             }
             if (encryption_method === 'hill') {
-                return hillEncrypt(text, key, encryption_params.size);
+                return hillEncrypt(text, key, parseInt(encryption_params.size));
             }
             return text; 
         } catch (e) {
@@ -807,10 +704,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 return caesarDecrypt(text, parseInt(key));
             }
             if (encryption_method === 'playfair') {
-                return playfairDecrypt(text, key);
+                return playfairDecrypt(text, key, parseInt(encryption_params.size));
             }
             if (encryption_method === 'hill') {
-                return hillDecrypt(text, key, encryption_params.size);
+                return hillDecrypt(text, key, parseInt(encryption_params.size));
             }
             return text; 
         } catch (e) {
@@ -819,7 +716,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Caesar ---
+    // --- César (Inchangé) ---
     function caesarEncrypt(text, shift) {
         return text.split('').map(char => {
             if (char >= 'a' && char <= 'z') {
@@ -840,66 +737,113 @@ document.addEventListener('DOMContentLoaded', () => {
         return caesarEncrypt(text, -shift);
     }
 
-    // --- Playfair ---
+    // --- [MODIFIÉ] Logique Playfair (pour gérer 5x5 et 6x6) ---
+    
+    // Cache pour les matrices générées
     let pfMatrixCache = {};
-    function getPlayfairMatrix(key) {
-        if (pfMatrixCache[key]) return pfMatrixCache[key];
-        let matrix = Array(5).fill(0).map(() => Array(5));
-        let keySquare = "";
-        const alphabet = "ABCDEFGHIKLMNOPQRSTUVWXYZ";
-        key.toUpperCase().replace(/J/g, 'I').split('').forEach(c => {
-            if (alphabet.includes(c) && !keySquare.includes(c)) keySquare += c;
-        });
-        alphabet.split('').forEach(c => {
-            if (!keySquare.includes(c)) keySquare += c;
-        });
-        for (let r = 0; r < 5; r++) {
-            for (let c = 0; c < 5; c++) {
-                matrix[r][c] = keySquare[r * 5 + c];
+
+    // Fonction de nettoyage (portage de la logique Python)
+    const pf_nettoyer_texte = (texte, taille) => {
+        texte = texte.toLowerCase();
+        texte = texte.replace(/[éèê]/g, "e").replace(/[àâ]/g, "a").replace(/ç/g, "c");
+        texte = texte.replace(/[^a-z0-9]/g, "").toUpperCase();
+        
+        let lettres = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        let chiffres = "0123456789";
+        let texte_nettoye = "";
+
+        if (taille == 5) {
+            lettres = lettres.replace("J", ""); // J exclu
+            for (const c of texte) {
+                if (lettres.includes(c)) texte_nettoye += (c === 'J' ? 'I' : c); // Convert J to I
+            }
+        } else if (taille == 6) {
+            for (const c of texte) {
+                if ((lettres + chiffres).includes(c)) texte_nettoye += c;
             }
         }
-        pfMatrixCache[key] = matrix;
-        return matrix;
+        return texte_nettoye;
+    };
+
+    function getPlayfairMatrix(key, size) {
+        const cacheKey = `${key}_${size}`;
+        if (pfMatrixCache[cacheKey]) return pfMatrixCache[cacheKey];
+
+        const cle_nettoyee = pf_nettoyer_texte(key, size); // Nettoyer la clé
+        
+        let grille = [];
+        let deja_vu = "";
+        let alphabet_base = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        
+        if (size == 5) {
+            alphabet_base = alphabet_base.replace("J", "I"); // I/J sont fusionnés
+        } else {
+            alphabet_base += "0123456789";
+        }
+        
+        (cle_nettoyee + alphabet_base).split('').forEach(c => {
+             if (!deja_vu.includes(c)) {
+                grille.push(c);
+                deja_vu += c;
+             }
+        });
+
+        // Convertir en 2D
+        let matrix2D = [];
+        for (let i = 0; i < size; i++) {
+            matrix2D.push(grille.slice(i * size, (i + 1) * size));
+        }
+        
+        pfMatrixCache[cacheKey] = matrix2D;
+        return matrix2D;
     }
-    function findPlayfairPos(matrix, char) {
-        for (let r = 0; r < 5; r++) {
-            for (let c = 0; c < 5; c++) {
+
+    function findPlayfairPos(matrix, char, size) {
+        if (char === 'J' && size === 5) char = 'I';
+        for (let r = 0; r < size; r++) {
+            for (let c = 0; c < size; c++) {
                 if (matrix[r][c] === char) return {r, c};
             }
         }
-        return null;
+        return null; // Ne devrait pas arriver
     }
-    function playfairEncrypt(text, key) {
-        const matrix = getPlayfairMatrix(key);
-        let prepared = text.toUpperCase().replace(/J/g, 'I').replace(/[^A-Z]/g, '');
+    
+    const pf_paires = (texte) => {
+        let resultat = [];
         let i = 0;
-        let digraphs = [];
-        while (i < prepared.length) {
-            if (i === prepared.length - 1) {
-                digraphs.push(prepared[i] + 'X');
-                i += 2; 
-            } else if (prepared[i] === prepared[i+1]) {
-                digraphs.push(prepared[i] + 'X');
-                i += 1; 
+        while (i < texte.length) {
+            let a = texte[i];
+            let b = (i+1 < texte.length) ? texte[i+1] : 'X';
+            if (a === b) {
+                resultat.push([a, 'X']);
+                i += 1;
             } else {
-                digraphs.push(prepared.slice(i, i+2));
-                i += 2; 
+                resultat.push([a, b]);
+                i += 2;
             }
         }
+        return resultat;
+    };
+
+    function playfairEncrypt(text, key, size) {
+        const matrix = getPlayfairMatrix(key, size);
+        const texte_nettoye = pf_nettoyer_texte(text, size);
+        const liste_paires = pf_paires(texte_nettoye);
         
         let cipher = "";
-        digraphs.forEach(digraph => {
-            let c1 = digraph[0];
-            let c2 = digraph[1];
-            let pos1 = findPlayfairPos(matrix, c1);
-            let pos2 = findPlayfairPos(matrix, c2);
+        liste_paires.forEach(paire => {
+            let c1 = paire[0];
+            let c2 = paire[1];
+            let pos1 = findPlayfairPos(matrix, c1, size);
+            let pos2 = findPlayfairPos(matrix, c2, size);
             if (!pos1 || !pos2) return; 
+
             if (pos1.r === pos2.r) {
-                cipher += matrix[pos1.r][(pos1.c + 1) % 5];
-                cipher += matrix[pos2.r][(pos2.c + 1) % 5];
+                cipher += matrix[pos1.r][(pos1.c + 1) % size];
+                cipher += matrix[pos2.r][(pos2.c + 1) % size];
             } else if (pos1.c === pos2.c) {
-                cipher += matrix[(pos1.r + 1) % 5][pos1.c];
-                cipher += matrix[(pos2.r + 1) % 5][pos2.c];
+                cipher += matrix[(pos1.r + 1) % size][pos1.c];
+                cipher += matrix[(pos2.r + 1) % size][pos2.c];
             } else {
                 cipher += matrix[pos1.r][pos2.c];
                 cipher += matrix[pos2.r][pos1.c];
@@ -907,22 +851,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         return cipher;
     }
-    function playfairDecrypt(text, key) {
-        const matrix = getPlayfairMatrix(key);
+
+    function playfairDecrypt(text, key, size) {
+        const matrix = getPlayfairMatrix(key, size);
         let plain = "";
-        for (let i = 0; i < text.length; i += 2) {
-            let c1 = text[i];
-            let c2 = text[i+1];
+        let prepared = pf_nettoyer_texte(text, size); 
+        
+        for (let i = 0; i < prepared.length; i += 2) {
+            let c1 = prepared[i];
+            let c2 = prepared[i+1];
             if(!c2) continue; 
-            let pos1 = findPlayfairPos(matrix, c1);
-            let pos2 = findPlayfairPos(matrix, c2);
+            let pos1 = findPlayfairPos(matrix, c1, size);
+            let pos2 = findPlayfairPos(matrix, c2, size);
             if (!pos1 || !pos2) continue; 
+
             if (pos1.r === pos2.r) {
-                plain += matrix[pos1.r][(pos1.c + 4) % 5];
-                plain += matrix[pos2.r][(pos2.c + 4) % 5];
+                plain += matrix[pos1.r][(pos1.c + size - 1) % size];
+                plain += matrix[pos2.r][(pos2.c + size - 1) % size];
             } else if (pos1.c === pos2.c) {
-                plain += matrix[(pos1.r + 4) % 5][pos1.c];
-                plain += matrix[(pos2.r + 4) % 5][pos2.c];
+                plain += matrix[(pos1.r + size - 1) % size][pos1.c];
+                plain += matrix[(pos2.r + size - 1) % size][pos2.c];
             } else {
                 plain += matrix[pos1.r][pos2.c];
                 plain += matrix[pos2.r][pos1.c];
@@ -931,7 +879,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return plain;
     }
     
-    // --- Hill ---
+    // --- Hill (Avec correction de bug) ---
     const A = 'A'.charCodeAt(0);
     const charToNum = (c) => c.charCodeAt(0) - A;
     const numToChar = (n) => String.fromCharCode(mod(n, 26) + A);
@@ -950,7 +898,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return cipher;
     }
-
     function hillDecrypt(text, key, size) {
         const keyMatrix = createHillMatrix(key, size);
         const decryptMatrix = getHillDecryptMatrix(keyMatrix, size);
@@ -959,13 +906,13 @@ document.addEventListener('DOMContentLoaded', () => {
         let plain = "";
         for (let i = 0; i < text.length; i += size) {
             const block = text.slice(i, i + size);
+            if (block.length < size) continue; 
             const vector = block.split('').map(charToNum);
             const resultVector = multiplyMatrixVector(decryptMatrix, vector);
             plain += resultVector.map(n => numToChar(n)).join('');
         }
         return plain;
     }
-
     function createHillMatrix(key, size) {
         let matrix = Array(size).fill(0).map(() => Array(size));
         for (let r = 0; r < size; r++) {
@@ -975,7 +922,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return matrix;
     }
-    
     function multiplyMatrixVector(matrix, vector) {
         const size = matrix.length;
         let result = Array(size).fill(0);
@@ -988,9 +934,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return result;
     }
-
     function mod(n, m) { return ((n % m) + m) % m; }
-    
     function modInverse(a, m) {
         a = mod(a, m);
         for (let x = 1; x < m; x++) {
@@ -998,7 +942,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return null;
     }
-    
     function determinant(matrix) {
         const n = matrix.length;
         if (n === 1) return matrix[0][0];
@@ -1013,14 +956,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         throw new Error("Only 2x2 and 3x3 matrices supported for client-side Hill.");
     }
-
     function getHillDecryptMatrix(matrix, size) {
         const det = determinant(matrix);
         const detInv = modInverse(det, 26);
         if (detInv === null) return null;
-        
         let adjugate = Array(size).fill(0).map(() => Array(size));
-        
         if (size === 2) {
             adjugate[0][0] = matrix[1][1];
             adjugate[0][1] = -matrix[0][1];
@@ -1031,6 +971,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (let c = 0; c < 3; c++) {
                     let minor = [
                         [matrix[(r+1)%3][(c+1)%3], matrix[(r+1)%3][(c+2)%3]],
+                        // [CORRIGÉ] Bug t -> c
                         [matrix[(r+2)%3][(c+1)%3], matrix[(r+2)%3][(c+2)%3]]
                     ];
                     let cofactor = (minor[0][0] * minor[1][1]) - (minor[0][1] * minor[1][0]);
@@ -1041,7 +982,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             throw new Error("Only 2x2 and 3x3 matrices supported.");
         }
-
         for (let r = 0; r < size; r++) {
             for (let c = 0; c < size; c++) {
                 adjugate[r][c] = mod(adjugate[r][c] * detInv, 26);
@@ -1049,5 +989,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return adjugate;
     }
-
 });

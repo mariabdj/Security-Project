@@ -37,7 +37,9 @@
 .anim-controls .viz-description { margin-bottom: 1.5rem; }
 .anim-controls form .btn { width: 100%; }
 .anim-controls form .btn i { width: 16px; height: 16px; }
-#anim-size-group input[type="text"] { width: 100%; }
+#anim-size-group input[type="text"] { width: 100%; } /* [MODIFIÉ] Correction, c'était input[type="text"] */
+#anim-size-group input[type="number"] { width: 100%; }
+
 
 .anim-player { display: flex; flex-direction: column; background-color: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; }
 .anim-player-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background-color: var(--bg-primary); border: 1px dashed var(--border-color); border-radius: 12px; color: var(--text-secondary); padding: 2rem; height: 100%; min-height: 400px; }
@@ -57,9 +59,13 @@
 /* 6. Animation Helper Classes */
 .viz-matrix-container { display: inline-block; position: relative; margin: 0 0.5rem; margin-bottom: 1.5rem; vertical-align: middle; }
 .viz-matrix { display: grid; border: 2px solid var(--text-primary); border-radius: 8px; font-family: monospace; font-size: 1.25rem; font-weight: 700; position: relative; overflow: hidden; background-color: var(--bg-primary); }
-.viz-matrix.playfair { grid-template-columns: repeat(5, 1fr); }
+
+/* [MODIFIÉ] Remplacement de '.playfair' par des classes spécifiques à la taille */
+.viz-matrix.playfair-5 { grid-template-columns: repeat(5, 1fr); }
+.viz-matrix.playfair-6 { grid-template-columns: repeat(6, 1fr); }
 .viz-matrix.hill-2 { grid-template-columns: repeat(2, 1fr); }
 .viz-matrix.hill-3 { grid-template-columns: repeat(3, 1fr); }
+
 
 .viz-matrix-cell { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); transition: background-color 0.3s ease, color 0.3s ease, transform 0.3s ease; position: relative; background-color: var(--bg-secondary); }
 
@@ -71,7 +77,6 @@
 .viz-matrix-cell.highlight-rect { background-color: color-mix(in srgb, var(--accent-primary) 15%, transparent); transform: scale(1.05); z-index: 5; }
 
 /* Vectors (Hill) */
-/* [FIX] Changed to flex column to force h4 above vector */
 .viz-vector-container {
     display: flex;
     flex-direction: column;
@@ -82,7 +87,7 @@
 }
 .viz-vector-container h4 { margin-bottom: 0.25rem; font-size: 1rem; }
 .viz-vector { 
-    display: inline-flex; /* Changed from inline-flex to flex */
+    display: inline-flex; 
     flex-direction: column; 
     border: 2px solid var(--text-primary); 
     border-radius: 8px; 
@@ -97,11 +102,11 @@
 .viz-vector-cell.highlight-calc { color: var(--error); transform: scale(1.05); background-color: color-mix(in srgb, var(--error) 15%, transparent); }
 
 /* Hill equation */
-.hill-equation { display: flex; align-items: center; justify-content: flex-start; /* Align left */ gap: 0.5rem; /* Reduced gap */ margin: 1.5rem 0; flex-wrap: wrap; }
-.hill-equation span { font-size: 1.5rem; font-weight: bold; color: var(--text-secondary); margin: 0 0.25rem; /* Smaller margin */ }
-.hill-equation > div, .hill-equation > h4 { position: relative; } /* Keep relative for potential positioning */
-.hill-equation h4 { margin-left: 0.5rem; /* Reduced margin */ display: inline-flex; align-items: center; } /* Align vertically */
-.hill-equation h4 .viz-text-block { margin-bottom: 0; } /* Remove bottom margin */
+.hill-equation { display: flex; align-items: center; justify-content: flex-start; gap: 0.5rem; margin: 1.5rem 0; flex-wrap: wrap; }
+.hill-equation span { font-size: 1.5rem; font-weight: bold; color: var(--text-secondary); margin: 0 0.25rem; }
+.hill-equation > div, .hill-equation > h4 { position: relative; } 
+.hill-equation h4 { margin-left: 0.5rem; display: inline-flex; align-items: center; } 
+.hill-equation h4 .viz-text-block { margin-bottom: 0; } 
 
 
 .viz-text-block { font-family: monospace; font-size: 1.25rem; font-weight: 700; letter-spacing: 2px; padding: 1rem; background-color: var(--bg-input); border-radius: 8px; display: inline-block; margin-bottom: 1rem; line-height: 1; }
@@ -129,7 +134,7 @@ pre.viz-code .dim { opacity: 0.6; }
 /* Final Summary Step Styles */
 .final-summary { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin-top: 2rem; width: 100%; }
 .final-summary h4 { margin-top: 1rem; margin-bottom: 0.25rem; }
-.final-summary .viz-text-block { margin: 0.25rem 0; display: block; } /* Changed to block for better stacking */
+.final-summary .viz-text-block { margin: 0.25rem 0; display: block; } 
 .final-summary i { width: 32px; height: 32px; color: var(--text-secondary); margin: 0.5rem 0; }
 
 
@@ -145,9 +150,11 @@ pre.viz-code .dim { opacity: 0.6; }
     .viz-tab { padding: 0.75rem 1rem; font-size: 0.9rem; }
     .viz-form-actions { flex-direction: column; }
     .viz-form-actions .btn { width: 100%; justify-content: center; }
+    /* [MODIFIÉ] Taille de cellule plus petite pour la grille 6x6 sur mobile */
     .viz-matrix-cell, .viz-vector-cell { width: 35px; height: 35px; font-size: 1rem; }
+    .viz-matrix.playfair-6 .viz-matrix-cell { width: 32px; height: 32px; font-size: 0.9rem; }
+
     .viz-alphabet-char { width: 25px; height: 25px; font-size: 1rem; }
     .hill-equation { gap: 0.5rem; justify-content: flex-start; }
      .hill-equation span { font-size: 1.2rem; }
 }
-
