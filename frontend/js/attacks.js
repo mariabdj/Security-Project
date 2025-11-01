@@ -1,17 +1,18 @@
 /* ---
-   SSAD Attack Simulation Logic (attacks.js)
+   SSAD Attack Simulation Logic (attacks_v3.js)
+   [FINAL FIXES FOR STATS AND ICON]
    --- */
 
 document.addEventListener('DOMContentLoaded', () => {
     // --- Modal Elements ---
     const modal = document.getElementById('attacks-modal');
-    if (!modal) return; // Don't run if modal isn't on the page
+    if (!modal) return; 
 
     // --- Tab Elements ---
     const tabs = modal.querySelectorAll('.attack-tabs .viz-tab');
     const tabPanels = modal.querySelectorAll('.attack-modal-body .viz-tab-panel');
 
-    // --- Shared Containers ---
+    // --- Conteneurs ---
     const setupContainer = document.getElementById('attack-setup-container');
     const simulationContainer = document.getElementById('attack-simulation-stage');
     const resultsContainer = document.getElementById('attack-results-container');
@@ -31,23 +32,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const dictSearchClearBtn = document.getElementById('dict-clear-btn');
     const dictSearchResults = document.getElementById('dict-search-results');
     const dictFileInput = document.getElementById('dict-file-input');
-    const dictFileLabel = modal.querySelector('label[for="dict-file-input"]');
+    const dictFileDropzone = document.getElementById('dict-file-dropzone');
     const dictFileName = document.getElementById('dict-file-name');
+    const dictFilePrompt = document.getElementById('dict-file-prompt');
+    const dictFileIcon = dictFileDropzone.querySelector('.dropzone-icon');
+    
     const dictStartBtn = document.getElementById('dict-start-btn');
     
-    // --- Animation Stage Elements ---
+    // --- Éléments de l'étape d'animation ---
     const animTitle = document.getElementById('attack-anim-title');
-    const animGuessBox = document.querySelector('.attack-anim-guess-box'); // Select the box for flashing
-    const animGuess = document.getElementById('attack-anim-guess');
     const animProgress = document.getElementById('attack-anim-progress');
-    const animAttempts = document.getElementById('attack-anim-attempts');
-    const animTime = document.getElementById('attack-anim-time');
-
-    // --- Results Stage Elements ---
+    
+    // --- Éléments de l'étape de résultats ---
     const resultHeader = document.getElementById('attack-result-header');
     const resultTitle = document.getElementById('attack-result-title');
-    const resultPasswordBox = document.getElementById('attack-result-password-box'); // Correct selector
+    const resultPasswordBox = document.getElementById('attack-result-password-box'); 
     const resultPasswordCode = document.getElementById('attack-result-password');
+    const resultMessageBox = document.getElementById('attack-result-message-box');
+    const resultMessage = document.getElementById('attack-result-message');
     const resultStatsBox = document.getElementById('attack-result-stats');
     const resultAttempts = document.getElementById('attack-result-attempts');
     const resultTime = document.getElementById('attack-result-time');
@@ -57,9 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let dictTarget = { id: null, username: null };
     let dictionaryFile = null;
     let searchDebounceTimer = null;
-    let animInterval = null; 
-    let timeInterval = null; 
-
+    
     // --- 1. General Logic (Tabs, Forms, Reset) ---
 
     tabs.forEach(tab => {
@@ -70,15 +70,17 @@ document.addEventListener('DOMContentLoaded', () => {
             tab.classList.add('active');
             tabPanels.forEach(p => p.classList.remove('active'));
             targetPanel.classList.add('active');
-            resetAttackUI();
+            resetAttackUI(); 
         });
     });
 
     function resetAttackUI() {
         setupContainer.style.display = 'block';
         simulationContainer.style.display = 'none';
-        resultsContainer.style.display = 'none';
-        
+        simulationContainer.classList.remove('visible');
+        resultsContainer.style.display = 'none'; 
+        resultsContainer.classList.remove('visible'); 
+
         bfTarget = { id: null, username: null };
         dictTarget = { id: null, username: null };
         dictionaryFile = null;
@@ -90,42 +92,45 @@ document.addEventListener('DOMContentLoaded', () => {
         bfSearchInput.readOnly = false;
         bfSearchClearBtn.style.display = 'none';
         bfSearchResults.innerHTML = '';
-        bfSearchResults.classList.add('hidden'); // Ensure results are hidden initially
+        bfSearchResults.classList.add('hidden'); 
         
         dictSearchInput.value = '';
         dictSearchInput.readOnly = false;
         dictSearchClearBtn.style.display = 'none';
         dictSearchResults.innerHTML = '';
-        dictSearchResults.classList.add('hidden'); // Ensure results are hidden initially
+        dictSearchResults.classList.add('hidden'); 
         
-        dictFileInput.value = ''; // Clear file input
-        dictFileName.textContent = 'Click to select a file...';
-        dictFileLabel.classList.remove('file-selected');
+        dictFileInput.value = ''; 
+        dictFileName.textContent = 'Click to upload or drag & drop';
+        dictFilePrompt.textContent = 'Supports: .txt files';
+        dictFileDropzone.classList.remove('file-selected');
+        dictFileIcon.innerHTML = '<i data-lucide="file-up"></i>';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
         
         bfStartBtn.disabled = true;
         dictStartBtn.disabled = true;
 
-        if (animInterval) clearInterval(animInterval);
-        if (timeInterval) clearInterval(timeInterval);
-
+        animProgress.style.transition = 'none'; 
         animProgress.style.width = '0%';
-        animAttempts.innerHTML = '0';
-        animTime.textContent = '0.00s';
-        animGuess.textContent = '...';
-        animGuessBox.classList.remove('flash-success', 'flash-fail'); // Reset flash
+        
+        // --- [BUG FIX] Supprimer l'icône de résultat (SVG) lors de la réinitialisation
+        const existingIcon = resultHeader.querySelector('svg');
+        if (existingIcon) {
+            existingIcon.remove();
+        }
     }
 
     attackResetBtn.addEventListener('click', resetAttackUI);
 
-    // --- 2. User Search Logic ---
+    // --- 2. User Search Logic (Inchangée) ---
 
     function handleAttackUserSearch(e, resultsContainer, clearBtn, onSelectCallback) {
         clearTimeout(searchDebounceTimer);
         const query = e.target.value.trim();
         resultsContainer.innerHTML = ''; 
-        resultsContainer.classList.remove('hidden'); // Show results container
+        resultsContainer.classList.remove('hidden'); 
         onSelectCallback(null, null); 
-        clearBtn.style.display = query.length > 0 ? 'block' : 'none'; // Show clear if typing
+        clearBtn.style.display = query.length > 0 ? 'block' : 'none'; 
 
         if (query.length < 2) {
             resultsContainer.innerHTML = `<div class="chat-list-placeholder">Enter 2+ characters...</div>`;
@@ -184,7 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Attach BF search listeners
     bfSearchInput.addEventListener('input', (e) => handleAttackUserSearch(e, bfSearchResults, bfSearchClearBtn, (id, username) => {
         bfTarget = { id, username };
         bfStartBtn.disabled = !bfTarget.id;
@@ -194,7 +198,6 @@ document.addEventListener('DOMContentLoaded', () => {
         bfStartBtn.disabled = true;
     });
 
-    // Attach Dict search listeners
     dictSearchInput.addEventListener('input', (e) => handleAttackUserSearch(e, dictSearchResults, dictSearchClearBtn, (id, username) => {
         dictTarget = { id, username };
         dictStartBtn.disabled = !dictTarget.id || !dictionaryFile;
@@ -204,23 +207,56 @@ document.addEventListener('DOMContentLoaded', () => {
         dictStartBtn.disabled = true;
     });
 
-    // --- 3. Dictionary File Logic ---
+    // --- 3. File Dropzone Logic (Inchangée) ---
+
+    function handleFileSelect(file) {
+        if (!file) {
+            dictionaryFile = null;
+            dictStartBtn.disabled = true;
+            return;
+        }
+
+        if (file.type !== 'text/plain') {
+            showNotification('Invalid file type. Please upload a .txt file.', 'error');
+            dictFileDropzone.classList.remove('file-selected');
+            dictFileDropzone.classList.remove('dragover');
+            return;
+        }
+
+        dictionaryFile = file;
+        dictFileName.textContent = file.name;
+        dictFilePrompt.textContent = `${(file.size / 1024).toFixed(1)} KB`;
+        dictFileDropzone.classList.add('file-selected');
+        dictFileIcon.innerHTML = '<i data-lucide="check-circle"></i>'; 
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        dictStartBtn.disabled = !dictTarget.id || !dictionaryFile;
+    }
 
     dictFileInput.addEventListener('change', () => {
         if (dictFileInput.files.length > 0) {
-            dictionaryFile = dictFileInput.files[0];
-            dictFileName.textContent = dictionaryFile.name;
-            dictFileLabel.classList.add('file-selected');
-            dictStartBtn.disabled = !dictTarget.id || !dictionaryFile;
-        } else {
-            dictionaryFile = null;
-            dictFileName.textContent = 'Click to select a file...';
-            dictFileLabel.classList.remove('file-selected');
-            dictStartBtn.disabled = true;
+            handleFileSelect(dictFileInput.files[0]);
         }
     });
 
-    // --- 4. Attack Submission & Animation ---
+    dictFileDropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dictFileDropzone.classList.add('dragover');
+    });
+    dictFileDropzone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dictFileDropzone.classList.remove('dragover');
+    });
+    dictFileDropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dictFileDropzone.classList.remove('dragover');
+        if (e.dataTransfer.files.length > 0) {
+            dictFileInput.files = e.dataTransfer.files; 
+            handleFileSelect(e.dataTransfer.files[0]);
+        }
+    });
+
+
+    // --- 4. Attack Submission & Animation (Inchangée) ---
 
     bfForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -228,8 +264,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = bfTarget.username;
         if (!target) return;
         
-        setupContainer.style.display = 'none';
-        simulationContainer.style.display = 'block';
+        setupContainer.style.display = 'none'; 
+        simulationContainer.style.display = 'flex'; 
+        simulationContainer.classList.add('visible'); 
         animTitle.textContent = `Running Brute Force (${type}) on "${target}"...`;
         
         runBruteForceAttack(target, type);
@@ -240,246 +277,191 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = dictTarget.username;
         if (!target || !dictionaryFile) return;
 
-        setupContainer.style.display = 'none';
-        simulationContainer.style.display = 'block';
+        setupContainer.style.display = 'none'; 
+        simulationContainer.style.display = 'flex'; 
+        simulationContainer.classList.add('visible'); 
         animTitle.textContent = `Running Dictionary Attack on "${target}"...`;
         
         runDictionaryAttack(target, dictionaryFile);
     });
+    
+    async function runAttackAnimation(attackPromise) {
+        
+        animProgress.style.width = '0%'; 
 
-    // --- "Hollywood" Brute Force Animation ---
-    async function runBruteForceAttack(targetUsername, charsetType) {
+        const MIN_ANIMATION_DURATION = 3000; 
+        const animationTimer = new Promise(resolve => setTimeout(resolve, MIN_ANIMATION_DURATION));
+        
+        animProgress.style.transition = 'none'; 
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => { 
+                 animProgress.style.transition = `width ${MIN_ANIMATION_DURATION}ms cubic-bezier(0.25, 1, 0.5, 1)`;
+                 animProgress.style.width = '100%';
+            });
+        });
+
         let realResult;
         try {
-            const response = await secureFetch('/passwords-and-attacks/attack/bruteforce', {
-                method: 'POST',
-                body: JSON.stringify({
-                    target_username: targetUsername,
-                    charset_type: charsetType,
-                    max_length: 8
-                })
-            });
-            realResult = await response.json();
-            if (!response.ok) throw new Error(realResult.detail || 'Attack failed');
+            const [fetchResult] = await Promise.all([
+                attackPromise,
+                animationTimer
+            ]);
+            
+            realResult = fetchResult; 
+            
+            if (!realResult.ok) {
+                const errorData = await realResult.json();
+                throw new Error(errorData.detail || 'Attack failed');
+            }
+            
+            realResult = await realResult.json(); 
+
         } catch (error) {
             showNotification(error.message, 'error');
-            resetAttackUI();
+            resetAttackUI(); 
             return;
         }
+
+        displayAttackResults(realResult);
+    }
+
+    function runBruteForceAttack(targetUsername, charsetType) {
+        const attackPromise = secureFetch('/passwords-and-attacks/attack/bruteforce', {
+            method: 'POST',
+            body: JSON.stringify({
+                target_username: targetUsername,
+                charset_type: charsetType
+            })
+        });
         
-        let charset = "abcdef0123456789!@#$%^&*()"; // Expanded charset for better visual
-        let len = 6;
-        if (charsetType === 'type1') { charset = "234"; len = 3; }
-        if (charsetType === 'type2') { charset = "0123456789"; len = 5; }
-        // Type 3 uses the expanded charset above, len = 6
-
-        const animDuration = 5000; // 5 second animation
-
-        animGuessBox.classList.remove('flash-success', 'flash-fail'); // Reset flash
-
-        anime({
-            targets: animProgress,
-            width: '100%',
-            duration: animDuration,
-            easing: 'easeInOutCubic', // Smoother easing
-            complete: () => {
-                clearInterval(animInterval);
-                clearInterval(timeInterval);
-                if(realResult.found) {
-                    animGuess.textContent = realResult.password;
-                    animGuess.style.color = 'var(--success)';
-                    animGuessBox.classList.add('flash-success'); // Flash green
-                } else {
-                    animGuess.style.color = 'var(--error)';
-                    animGuessBox.classList.add('flash-fail'); // Flash red
-                }
-                // Wait slightly longer for flash effect
-                setTimeout(() => displayAttackResults(realResult), 1200);
-            }
-        });
-
-        anime({
-            targets: animAttempts,
-            innerHTML: realResult.attempts,
-            round: 1,
-            duration: animDuration,
-            easing: 'easeOutQuad'
-        });
-
-        animGuess.style.color = 'var(--accent-primary)'; 
-        animInterval = setInterval(() => {
-            let guess = "";
-            for (let i = 0; i < len; i++) {
-                guess += charset.charAt(Math.floor(Math.random() * charset.length));
-            }
-            animGuess.textContent = guess;
-        }, 30); 
-
-        let startTime = Date.now();
-        timeInterval = setInterval(() => {
-            let elapsed = (Date.now() - startTime) / 1000;
-            // Stop timer visually when progress bar completes
-            if (elapsed * 1000 >= animDuration) {
-                 elapsed = animDuration / 1000;
-                 clearInterval(timeInterval);
-            }
-            animTime.textContent = `${elapsed.toFixed(2)}s`;
-        }, 30);
+        runAttackAnimation(attackPromise);
     }
     
-    // --- "Hollywood" Dictionary Animation ---
-    async function runDictionaryAttack(targetUsername, file) {
-        let realResult;
-        let fileWords = [];
-        try {
-            const fileContent = await file.text();
-            fileWords = fileContent.split(/\r?\n/).filter(w => w); 
+    function runDictionaryAttack(targetUsername, file) {
+        const formData = new FormData();
+        formData.append('dictionary_file', file);
+        formData.append('target_username', targetUsername);
 
-            const formData = new FormData();
-            formData.append('dictionary_file', file);
-            formData.append('target_username', targetUsername);
-
-            const response = await secureFetch('/passwords-and-attacks/attack/dictionary', {
-                method: 'POST',
-                body: formData,
-                headers: { 'Content-Type': undefined } 
-            });
-            realResult = await response.json();
-            if (!response.ok) throw new Error(realResult.detail || 'Attack failed');
-
-        } catch (error) {
-            showNotification(error.message, 'error');
-            resetAttackUI();
-            return;
-        }
+        const attackPromise = secureFetch('/passwords-and-attacks/attack/dictionary', {
+            method: 'POST',
+            body: formData,
+            headers: { 'Content-Type': undefined } 
+        });
         
-        let totalWords = fileWords.length;
-        if(totalWords === 0) {
-            showNotification("Dictionary file is empty.", "error");
-            resetAttackUI();
-            return;
-        }
-        let animationDuration = Math.min(Math.max(totalWords * 15, 4000), 8000); // Slower per word, min 4s
-
-        animGuessBox.classList.remove('flash-success', 'flash-fail'); // Reset flash
-
-        anime({
-            targets: animProgress,
-            width: '100%',
-            duration: animationDuration,
-            easing: 'easeInOutCubic', // Smoother easing
-            complete: () => {
-                clearInterval(animInterval);
-                clearInterval(timeInterval);
-                if(realResult.found) {
-                    animGuess.textContent = realResult.password;
-                    animGuess.style.color = 'var(--success)';
-                    animGuessBox.classList.add('flash-success'); // Flash green
-                } else {
-                    animGuess.textContent = fileWords[fileWords.length - 1]; 
-                    animGuess.style.color = 'var(--error)';
-                    animGuessBox.classList.add('flash-fail'); // Flash red
-                }
-                setTimeout(() => displayAttackResults(realResult), 1200);
-            }
-        });
-
-        anime({
-            targets: animAttempts,
-            innerHTML: realResult.attempts,
-            round: 1,
-            duration: animationDuration,
-            easing: 'easeOutQuad'
-        });
-
-        animGuess.style.color = 'var(--accent-primary)';
-        let wordIndex = 0;
-        animInterval = setInterval(() => {
-            animGuess.textContent = fileWords[wordIndex % totalWords];
-            wordIndex++;
-        }, 35); // Slightly slower word flip
-
-        let startTime = Date.now();
-        timeInterval = setInterval(() => {
-            let elapsed = (Date.now() - startTime) / 1000;
-            if (elapsed * 1000 >= animationDuration) {
-                 elapsed = animationDuration / 1000;
-                 clearInterval(timeInterval);
-            }
-            animTime.textContent = `${elapsed.toFixed(2)}s`;
-        }, 35);
+        runAttackAnimation(attackPromise);
     }
 
-    // --- 5. Display Results (Animations + Password Fix) ---
+
+    // --- 5. Results Display Logic (MODIFIED) ---
 
     function displayAttackResults(result) {
-        simulationContainer.style.display = 'none';
-        resultsContainer.style.display = 'block';
+        simulationContainer.style.display = 'none'; 
+        resultsContainer.classList.add('visible'); 
+        resultsContainer.style.display = 'flex'; 
 
-        // Reset elements for animation
-        resultHeader.querySelector('i').style.transform = 'scale(0)';
+        // --- [LE VRAI FIX POUR L'ICÔNE] ---
+        // Sélectionne le <svg> que Lucide crée, pas la balise <i>.
+        const existingIcon = resultHeader.querySelector('svg');
+        if (existingIcon) {
+            existingIcon.remove();
+        }
+        
+        // Réinitialiser les animations
         resultTitle.style.opacity = 0;
-        resultPasswordBox.style.opacity = 0; // Target the box
+        resultPasswordBox.style.display = 'none';
+        resultMessageBox.style.display = 'none';
+        resultPasswordBox.style.opacity = 0; 
+        resultMessageBox.style.opacity = 0;
         resultPasswordBox.style.transform = 'translateY(20px)';
+        resultMessageBox.style.transform = 'translateY(20px)';
+        
+        // --- [LE VRAI FIX POUR LES STATS] ---
+        // Réinitialiser la transformation sur le CONTENEUR des stats
+        resultStatsBox.style.transform = 'none'; 
+        // Réinitialiser les cartes individuelles
         resultStatsBox.querySelectorAll('.attack-stat-card').forEach(card => {
             card.style.transform = 'rotateY(-90deg)';
         });
+
         attackResetBtn.style.opacity = 0;
         attackResetBtn.style.transform = 'translateY(20px)';
+        
+        const iconEl = document.createElement('i'); // Crée la balise <i>
         
         if (result.found) {
             resultHeader.className = 'attack-result-header success';
             resultTitle.innerHTML = 'Password Found!';
-            resultHeader.querySelector('i').outerHTML = '<i data-lucide="shield-check"></i>';
-            // [FIX] Show the parent BOX now
+            iconEl.setAttribute('data-lucide', 'shield-check');
+            resultHeader.prepend(iconEl); // Ajoute <i>
+            
             resultPasswordBox.style.display = 'flex'; 
-            resultPasswordCode.textContent = result.password;
+            resultPasswordCode.textContent = result.password; 
         } else {
             resultHeader.className = 'attack-result-header fail';
-            resultTitle.innerHTML = 'Password Not Found';
-            resultHeader.querySelector('i').outerHTML = '<i data-lucide="shield-off"></i>';
-            // [FIX] Hide the parent BOX now
-            resultPasswordBox.style.display = 'none';
+            resultTitle.innerHTML = 'Attack Failed';
+            iconEl.setAttribute('data-lucide', 'shield-off');
+            resultHeader.prepend(iconEl); // Ajoute <i>
+
+            resultPasswordBox.style.display = 'none'; 
+            resultMessageBox.style.display = 'block'; 
+            resultMessage.textContent = result.message || "Password not found.";
         }
 
+        // Les stats sont définies ici, que l'attaque ait réussi ou non
         resultAttempts.textContent = result.attempts.toLocaleString();
         resultTime.textContent = `${result.time_taken.toFixed(4)}s`;
         
-        lucide.createIcons(); 
+        // Lucide transforme <i> en <svg>
+        if (typeof lucide !== 'undefined') lucide.createIcons(); 
 
-        const tl = anime.timeline({
-            easing: 'easeOutExpo',
-            duration: 800
-        });
+        // Animer les résultats
+        if (typeof anime !== 'undefined') {
+            const tl = anime.timeline({
+                easing: 'easeOutExpo',
+                duration: 800
+            });
 
-        tl.add({
-            targets: resultHeader.querySelector('i'),
-            scale: [0, 1],
-            rotate: '1turn',
-            duration: 600
-        })
-        .add({
-            targets: resultTitle,
-            opacity: [0, 1],
-        }, '-=400')
-        .add({
-            targets: resultStatsBox.querySelectorAll('.attack-stat-card'),
-            transform: 'rotateY(0deg)',
-            delay: anime.stagger(200),
-            duration: 600
-        }, '-=500')
-        .add({
-            // [FIX] Animate the BOX
-            targets: resultPasswordBox, 
-            opacity: [0, 1],
-            translateY: 0,
-            duration: 500
-        }, '-=300')
-         .add({
-            targets: attackResetBtn,
-            opacity: [0, 1],
-            translateY: 0,
-            duration: 500
-        }, '-=200');
+            tl.add({
+                targets: resultHeader.querySelector('svg'), // Cible le <svg>
+                scale: [0, 1],
+                rotate: '1turn',
+                duration: 600
+            })
+            .add({
+                targets: resultTitle,
+                opacity: [0, 1],
+            }, '-=400')
+            .add({
+                // Les stats sont animées ici
+                targets: resultStatsBox.querySelectorAll('.attack-stat-card'),
+                transform: 'rotateY(0deg)',
+                delay: anime.stagger(200),
+                duration: 600
+            }, '-=500')
+            .add({
+                targets: [resultPasswordBox, resultMessageBox], 
+                opacity: [0, 1],
+                translateY: 0,
+                duration: 500
+            }, '-=300')
+             .add({
+                targets: attackResetBtn,
+                opacity: [0, 1],
+                translateY: 0,
+                duration: 500
+            }, '-=200');
+        } else {
+             // Fallback
+             resultTitle.style.opacity = 1;
+             resultPasswordBox.style.opacity = 1; 
+             resultMessageBox.style.opacity = 1;
+             resultPasswordBox.style.transform = 'translateY(0)';
+             resultMessageBox.style.transform = 'translateY(0)';
+             resultStatsBox.querySelectorAll('.attack-stat-card').forEach(card => {
+                card.style.transform = 'rotateY(0deg)';
+             });
+             attackResetBtn.style.opacity = 1;
+             attackResetBtn.style.transform = 'translateY(0)';
+        }
     }
 });

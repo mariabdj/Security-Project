@@ -24,6 +24,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeToggle = document.getElementById('theme-toggle');
     const notificationContainer = document.getElementById('notification-container');
 
+    // --- [NOUVEAU] Sélection des boutons Show/Hide Password ---
+    const passwordToggleButtons = document.querySelectorAll('.password-toggle-btn');
+
+
     // --- Utility Functions ---
 
     /**
@@ -90,6 +94,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- FIXED: Initial Icon Load ---
     // This runs *after* the DOM is ready and initializes all icons.
     lucide.createIcons();
+
+
+    // --- [NOUVEAU] Logique pour Show/Hide Password ---
+    passwordToggleButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const targetInputId = button.dataset.target;
+            const targetInput = document.getElementById(targetInputId);
+            
+            if (!targetInput) return;
+
+            const isPassword = targetInput.type === 'password';
+            
+            // Basculer le type de l'input
+            targetInput.type = isPassword ? 'text' : 'password';
+            
+            // Basculer la classe du bouton (pour changer l'icône via CSS)
+            button.classList.toggle('is-showing', isPassword);
+        });
+    });
 
 
     // --- Auth Card Flip Logic ---

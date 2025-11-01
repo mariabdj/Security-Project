@@ -42,7 +42,13 @@
                         
                         <div class="input-group">
                             <label for="login-password">Password</label>
-                            <input type="password" id="login-password" name="password" required>
+                            <div class="password-input-wrapper">
+                                <input type="password" id="login-password" name="password" required>
+                                <button type="button" class="password-toggle-btn" data-target="login-password" aria-label="Show/hide password" title="Show/hide password">
+                                    <i data-lucide="eye" class="icon-eye"></i>
+                                    <i data-lucide="eye-off" class="icon-eye-off"></i>
+                                </button>
+                            </div>
                         </div>
                         
                         <button type="submit" class="btn btn-primary" id="login-btn">
@@ -66,7 +72,13 @@
                         
                         <div class="input-group">
                             <label for="signup-password">Password</label>
-                            <input type="password" id="signup-password" name="password" required>
+                            <div class="password-input-wrapper">
+                                <input type="password" id="signup-password" name="password" required>
+                                <button type="button" class="password-toggle-btn" data-target="signup-password" aria-label="Show/hide password" title="Show/hide password">
+                                    <i data-lucide="eye" class="icon-eye"></i>
+                                    <i data-lucide="eye-off" class="icon-eye-off"></i>
+                                </button>
+                            </div>
                         </div>
 
                         <label for="password-type" class="password-gen-label">Select password type:</label>

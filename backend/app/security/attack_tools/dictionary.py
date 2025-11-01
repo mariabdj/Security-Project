@@ -1,39 +1,52 @@
-# backend/app/security/attack_tools/dictionary.py
 import time
 from ...core.supabase_client import supabase
 
 def run_attack(target_username: str, dictionary_content: str):
     """
-    Performs a dictionary attack on a user's plain-text password.
+    [CORRIGÉ]
+    Exécute une attaque par dictionnaire.
+    Utilise .strip() pour garantir une comparaison correcte.
     """
-    # 1. Get the target's real password (in plain text)
-    response = supabase.table("users").select("password_hash").eq("username", target_username).execute()
-    if not response.data:
-        raise ValueError("Target user not found.")
-    real_password = response.data[0]['password_hash']
+    # 1. Obtenir le vrai mot de passe (en clair)
+    try:
+        response = supabase.table("users").select("password_hash").eq("username", target_username).execute()
+        if not response.data:
+            raise ValueError("Utilisateur cible non trouvé.")
+        # [FIX] Utiliser .strip() pour enlever les espaces blancs accidentels
+        real_password = response.data[0]['password_hash'].strip() 
+    except Exception as e:
+        raise ValueError(f"Erreur Supabase: {str(e)}")
 
-    # 2. Split dictionary content into a list of words
+    # 2. Diviser le dictionnaire en une liste de mots
     word_list = dictionary_content.splitlines()
     
-    # 3. Run the attack
+    # 3. Lancer l'attaque
     start_time = time.time()
     attempts = 0
+    found_password = None
+
     for word in word_list:
         attempts += 1
-        # Check for a match
-        if word == real_password:
-            end_time = time.time()
-            return {
-                "found": True,
-                "password": word,
-                "attempts": attempts,
-                "time_taken": round(end_time - start_time, 4)
-            }
+        # [FIX] Utiliser .strip() pour nettoyer les mots du dictionnaire
+        if word.strip() == real_password:
+            found_password = word.strip()
+            break # Arrêter dès que le mot est trouvé
 
     end_time = time.time()
-    return {
-        "found": False,
-        "message": "Password not found in the dictionary.",
-        "attempts": attempts,
-        "time_taken": round(end_time - start_time, 4)
-    }
+
+    # 4. Retourner le résultat
+    if found_password:
+        return {
+            "found": True,
+            "password": found_password, # Renvoyer le mot de passe trouvé
+            "attempts": attempts,
+            "time_taken": round(end_time - start_time, 4)
+        }
+    else:
+        return {
+            "found": False,
+            "message": "Mot de passe non trouvé dans le dictionnaire.",
+            "attempts": attempts,
+            "time_taken": round(end_time - start_time, 4)
+        }
+

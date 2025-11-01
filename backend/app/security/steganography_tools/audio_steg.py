@@ -19,15 +19,23 @@ def encode_message(audio_bytes: bytes, secret_message: str) -> bytes:
         raise ValueError("Message is too long to be hidden in this audio file.")
 
     # Flatten the audio data array to make it easier to iterate over
-    flat_data = data.flatten()
+    # We make a copy to ensure we are not modifying the original data view
+    flat_data = data.flatten().copy()
     data_index = 0
 
     for i in range(len(flat_data)):
         if data_index < len(binary_message):
             # Get the current audio sample
             sample = flat_data[i]
-            # Change the least significant bit
-            new_sample = (sample & 0b1111111111111110) | int(binary_message[data_index])
+            
+            # --- [FIXED LINE] ---
+            # The original mask (0b1111111111111110) was a large positive int (65534),
+            # which caused an overflow when bitwise-ANDed with negative int16 samples.
+            # Using ~1 (which is -2) provides the correct bitmask (1111...1110)
+            # that works for both positive and negative signed integers.
+            new_sample = (sample & ~1) | int(binary_message[data_index])
+            # --- [END FIX] ---
+
             flat_data[i] = new_sample
             data_index += 1
         else:
@@ -38,6 +46,7 @@ def encode_message(audio_bytes: bytes, secret_message: str) -> bytes:
 
     # Write the new WAV data to a byte buffer
     byte_io = io.BytesIO()
+    # Ensure we write back using the original data type
     wavfile.write(byte_io, samplerate, encoded_data.astype(data.dtype))
     return byte_io.getvalue()
 
@@ -56,21 +65,29 @@ def decode_message(audio_bytes: bytes) -> str:
 
     for sample in flat_data:
         # Extract the LSB from each audio sample
+        # (sample & 1) works correctly for both positive and negative ints
         binary_data += str(sample & 1)
-        if binary_delimiter in binary_data:
+        
+        # Check if we have found the *entire* delimiter
+        if binary_data.endswith(binary_delimiter):
             break
             
     # Find the delimiter and extract the message part
-    try:
-        message_part = binary_data.split(binary_delimiter, 1)[0]
-    except IndexError:
-        return "" # Delimiter not found
+    message_part = binary_data.split(binary_delimiter, 1)[0]
+    
+    # Check if anything was found
+    if not message_part:
+        return "" # Return empty string if no message found before delimiter
 
     # Convert binary back to string
     secret_message = ""
     for i in range(0, len(message_part), 8):
         byte = message_part[i:i+8]
         if len(byte) == 8:
-            secret_message += chr(int(byte, 2))
+            try:
+                secret_message += chr(int(byte, 2))
+            except ValueError:
+                # This can happen if the extracted bits are not valid ASCII/UTF-8
+                pass # Ignore non-character byte
             
     return secret_message

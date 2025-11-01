@@ -1,15 +1,16 @@
 /* ---
    SSAD Attack Simulation Stylesheet (attacks.css)
+   [ALL FIXES INCLUDED]
    --- */
 
 /* 1. Modal Body & Tab Layout */
 .attack-modal-body {
     padding-top: 0;
-    min-height: 60vh;
+    min-height: 70vh; 
 }
 .attack-tabs {
     border-bottom: 1px solid var(--border-color);
-    margin-bottom: 3rem; /* [FIX] Increased spacing */
+    margin-bottom: 3.5rem; 
 }
 .attack-modal-body .viz-tab-panel {
     display: none;
@@ -17,30 +18,37 @@
 .attack-modal-body .viz-tab-panel.active {
     display: block;
 }
+/* This container holds the setup forms */
+.attack-setup-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
 
 /* 2. Attack Forms */
 .attack-form {
     display: flex;
     flex-direction: column;
-    gap: 2rem; /* [FIX] Increased spacing */
+    gap: 2.5rem; 
     max-width: 600px;
     margin: 0 auto;
 }
 .attack-form-section {
-     margin-bottom: 0.5rem; /* [FIX] Added spacing between sections implicitly via gap */
+     /* Le 'gap' gère l'espacement */
 }
 .attack-form-section label {
     display: block;
-    font-size: 0.9rem; /* [FIX] Slightly larger label */
+    font-size: 1rem; 
     font-weight: 500;
-    margin-bottom: 0.75rem; /* [FIX] Increased spacing */
+    margin-bottom: 1rem; 
     color: var(--text-secondary);
 }
+
+/* [FIX #1] Spacing above the "Start Attack" button */
 .attack-form .btn-primary {
     width: auto;
     align-self: flex-start;
-    padding: 0.8rem 1.75rem; /* [FIX] Larger button padding */
-    margin-top: 1rem; /* [FIX] Increased spacing */
+    padding: 0.8rem 1.75rem; 
+    margin-top: 1.5rem; /* C'EST LE FIX */
 }
 .attack-form .btn-primary:disabled {
     background-color: var(--accent-secondary);
@@ -48,7 +56,7 @@
     cursor: not-allowed;
 }
 
-/* 3. User Search Box (re-using chat styles) */
+/* 3. User Search Box */
 .attack-search-box .input-group {
     position: relative;
     margin-bottom: 0;
@@ -64,8 +72,8 @@
     z-index: 1;
 }
 .attack-search-box input {
-    padding-left: 2.75rem; /* [FIX] More space for icon */
-    padding-right: 2.75rem; /* [FIX] More space for clear button */
+    padding-left: 2.75rem; 
+    padding-right: 2.75rem; 
 }
 .attack-search-box input:read-only {
     background-color: color-mix(in srgb, var(--accent-primary) 10%, transparent);
@@ -110,7 +118,7 @@
     transition: all 0.3s ease;
     transform-origin: top;
     animation: fade-in-down 0.3s ease-out;
-    margin-top: -1px; /* Overlap border slightly */
+    margin-top: -1px; 
 }
 .attack-search-results.hidden {
     display: none;
@@ -119,7 +127,6 @@
     from { opacity: 0; transform: scaleY(0.9); }
     to { opacity: 1; transform: scaleY(1); }
 }
-
 .attack-search-results .chat-list-item {
     border-bottom: 1px solid var(--border-color);
 }
@@ -131,31 +138,83 @@
 .attack-search-results .chat-list-placeholder { padding: 1rem; text-align: center; font-size: 0.9rem; color: var(--text-secondary); }
 
 
-/* 4. Custom File Upload Button */
-.attack-file-label {
+/* 4. [FIX #2] Nouveaux styles pour le sélecteur de fichiers Drag & Drop */
+.attack-file-dropzone {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
+    justify-content: center;
+    gap: 1rem;
     width: 100%;
-    padding: 0.85rem 1rem;
-    font-size: 0.95rem;
-    border: 1px dashed var(--border-color);
+    min-height: 160px;
+    padding: 1.5rem;
+    border: 2px dashed var(--border-color);
     background-color: var(--bg-input);
-    color: var(--text-secondary);
-    border-radius: 8px;
+    border-radius: 12px;
     cursor: pointer;
     transition: all 0.3s ease;
 }
-.attack-file-label:hover { border-color: var(--accent-primary); color: var(--text-primary); }
-.attack-file-label i { width: 18px; height: 18px; }
-.attack-file-label span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.attack-file-label.file-selected {
+.attack-file-dropzone .dropzone-icon i {
+    width: 32px;
+    height: 32px;
+    color: var(--text-placeholder);
+    transition: all 0.3s ease;
+}
+.attack-file-dropzone .dropzone-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+}
+.attack-file-dropzone .dropzone-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    max-width: 500px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.attack-file-dropzone .dropzone-prompt {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+/* États du Dropzone */
+.attack-file-dropzone:hover {
+    border-color: var(--accent-primary);
+    background-color: var(--bg-secondary);
+}
+.attack-file-dropzone.dragover {
+    border-color: var(--accent-primary);
+    border-style: solid;
+    background-color: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+}
+.attack-file-dropzone.dragover .dropzone-icon i {
+    color: var(--accent-primary);
+}
+
+/* État 'Fichier sélectionné' */
+.attack-file-dropzone.file-selected {
     border-style: solid;
     border-color: var(--success);
     background-color: color-mix(in srgb, var(--success) 10%, transparent);
-    color: var(--success);
-    font-weight: 500;
 }
+.attack-file-dropzone.file-selected .dropzone-icon {
+    width: 36px;
+    height: 36px;
+    color: var(--success);
+}
+.attack-file-dropzone.file-selected .dropzone-icon i {
+    color: var(--success);
+}
+.attack-file-dropzone.file-selected .dropzone-title {
+    color: var(--success);
+    font-weight: 700;
+}
+
 
 /* 5. MiTM Placeholder */
 .attack-placeholder {
@@ -170,65 +229,44 @@
 .attack-placeholder i { width: 48px; height: 48px; margin-bottom: 1.5rem; color: var(--text-placeholder); }
 .attack-placeholder h2 { font-size: 1.5rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; }
 
-/* 6. Animation Stage */
+/* 6. [FIX #3] Nouveaux styles pour l'étape d'animation */
 .attack-simulation-stage {
-    display: flex;
+    display: none; /* Caché par défaut */
     flex-direction: column;
     align-items: center;
-    gap: 2.5rem; /* [FIX] Increased spacing */
-    padding: 3rem; /* [FIX] Increased spacing */
+    gap: 3rem; 
+    padding: 3.5rem; 
     max-width: 700px;
-    margin: 2rem auto; /* [FIX] Increased spacing */
+    margin: 0 auto; /* Centré */
     border: 1px solid var(--border-color);
     border-radius: 12px;
     background-color: var(--bg-primary);
 }
+.attack-simulation-stage.visible {
+    display: flex; /* Montré par JS */
+}
+
 .attack-simulation-stage h3 {
-    font-size: 1.3rem; /* [FIX] Slightly larger */
+    font-size: 1.5rem; 
     font-weight: 600;
     color: var(--text-primary);
-}
-
-.attack-anim-guess-box {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    background-color: var(--bg-input);
-    padding: 1.25rem 1.75rem; /* [FIX] Increased spacing */
-    border-radius: 8px;
-    width: 100%;
-    transition: background-color 0.3s ease; /* For flash */
-}
-/* [FIX] Flash effect classes */
-.attack-anim-guess-box.flash-success { background-color: color-mix(in srgb, var(--success) 30%, transparent); }
-.attack-anim-guess-box.flash-fail { background-color: color-mix(in srgb, var(--error) 30%, transparent); }
-
-.attack-anim-guess-box span { font-size: 0.9rem; font-weight: 500; color: var(--text-secondary); }
-.attack-anim-guess-box code {
-    font-family: monospace;
-    font-size: 1.75rem; /* [FIX] Larger guess text */
-    font-weight: 700;
-    color: var(--accent-primary);
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    flex-grow: 1;
+    text-align: center;
 }
 
 .attack-anim-progress-bar {
     width: 100%;
-    height: 14px; /* [FIX] Thicker progress bar */
+    height: 14px; 
     background-color: var(--bg-input);
     border-radius: 7px;
     overflow: hidden;
-    position: relative; /* For pseudo-element */
+    position: relative; 
 }
 #attack-anim-progress {
     width: 0%;
     height: 100%;
     border-radius: 7px;
-    transition: width 0.1s linear;
-    /* [FIX] Gradient and stripes for better visual */
+    /* transition de 3 secondes */
+    transition: width 3s cubic-bezier(0.25, 1, 0.5, 1);
     background-color: var(--accent-primary);
     background-image: linear-gradient(
         45deg,
@@ -245,9 +283,11 @@
     to { background-position: 0 0; }
 }
 
+/* [FIX #1] Ce style n'est plus utilisé par l'animation, 
+   mais il est utilisé par l'écran de résultats, donc on le garde. */
 .attack-anim-stats {
     display: flex;
-    gap: 2rem; /* [FIX] Increased spacing */
+    gap: 2.5rem; 
     width: 100%;
 }
 .attack-stat-card {
@@ -255,73 +295,105 @@
     background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 1.5rem; /* [FIX] Increased spacing */
+    padding: 1.75rem; 
     text-align: center;
 }
 .attack-stat-card label {
     display: block;
-    font-size: 0.85rem; /* [FIX] Slightly larger */
+    font-size: 0.9rem; 
     font-weight: 500;
     color: var(--text-secondary);
-    margin-bottom: 0.75rem; /* [FIX] Increased spacing */
+    margin-bottom: 0.75rem; 
 }
 .attack-stat-card span {
-    font-size: 1.75rem; /* [FIX] Larger stats */
+    font-size: 1.75rem; 
     font-weight: 700;
     color: var(--text-primary);
     font-family: monospace;
 }
 
-/* 7. Results Container */
+/* 7. [FIX #4] Nouveaux styles pour le conteneur de résultats */
 .attack-results-container {
-    display: flex;
+    display: none; /* Caché par défaut */
     flex-direction: column;
     align-items: center;
-    gap: 2.5rem; /* [FIX] Increased spacing */
-    padding: 3rem; /* [FIX] Increased spacing */
+    gap: 2rem; 
+    padding: 3.5rem; 
     max-width: 700px;
-    margin: 2rem auto; /* [FIX] Increased spacing */
+    margin: 0 auto; /* Centré */
     border: 1px solid var(--border-color);
     border-radius: 12px;
     background-color: var(--bg-primary);
     perspective: 1000px;
 }
+.attack-results-container.visible {
+    display: flex; /* Montré par JS */
+}
+
 .attack-result-header {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.25rem; /* [FIX] Increased spacing */
+    gap: 1.25rem; 
+    margin-bottom: 1rem; 
 }
-.attack-result-header i { width: 48px; height: 48px; transform: scale(0); }
-.attack-result-header h2 { font-size: 1.75rem; font-weight: 700; opacity: 0; }
+.attack-result-header i { 
+    width: 48px; 
+    height: 48px; 
+    transform: scale(0); /* Pour l'animation */
+}
+.attack-result-header h2 { 
+    font-size: 1.75rem; 
+    font-weight: 700; 
+    opacity: 0; /* Pour l'animation */
+}
 .attack-result-header.success { color: var(--success); }
 .attack-result-header.fail { color: var(--error); }
 
 .attack-result-password {
-    display: flex;
+    display: none; /* Montré par JS en cas de succès */
     flex-direction: column;
     align-items: center;
-    gap: 0.75rem; /* [FIX] Increased spacing */
+    gap: 0.75rem; 
     opacity: 0;
     transform: translateY(20px);
+    width: 100%;
 }
-.attack-result-password label { font-size: 0.9rem; color: var(--text-secondary); }
+.attack-result-password label { 
+    font-size: 1rem; 
+    color: var(--text-secondary); 
+}
 .attack-result-password code {
     font-family: monospace;
-    font-size: 1.75rem; /* [FIX] Larger password */
+    font-size: 2rem; 
     font-weight: 700;
     color: var(--success);
     background-color: var(--bg-input);
-    padding: 0.75rem 1.25rem; /* [FIX] Increased spacing */
+    padding: 1rem 1.5rem; 
     border-radius: 8px;
     border: 1px solid var(--border-color);
+    margin-top: 0.5rem;
+    word-break: break-all;
 }
-.attack-results-container .attack-stat-card { transform: rotateY(-90deg); }
+
+.attack-result-message {
+    display: none; /* Montré par JS en cas d'échec */
+    opacity: 0;
+    transform: translateY(20px);
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.attack-results-container .attack-stat-card { 
+    transform: rotateY(-90deg); /* Pour l'animation */
+}
 
 .attack-results-container .btn-secondary {
     width: auto;
-    padding: 0.8rem 1.75rem; /* [FIX] Larger button padding */
-    margin-top: 1.5rem; /* [FIX] Increased spacing */
+    padding: 0.8rem 1.75rem; 
+    margin-top: 2rem; 
     opacity: 0;
     transform: translateY(20px);
 }

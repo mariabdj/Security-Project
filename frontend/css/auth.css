@@ -218,3 +218,78 @@ html, body {
         padding-top: 1rem;
     }
 }
+
+
+/* --- [NOUVEAU] Styles pour le bouton Oeil (Show/Hide Password) --- */
+
+.password-input-wrapper {
+    position: relative;
+}
+
+/* Ajoute un padding à droite pour faire de la place à l'icône */
+.password-input-wrapper input[type="password"],
+.password-input-wrapper input[type="text"] {
+    padding-right: 3.5rem; /* 1rem (original) + 2.5rem (pour le bouton) */
+}
+
+.password-toggle-btn {
+    position: absolute;
+    top: 50%; /* Centre verticalement par rapport à l'input */
+    right: 0.75rem;
+    transform: translateY(-50%);
+    
+    /* Reset du style bouton */
+    background: transparent;
+    border: none;
+    padding: 0.5rem;
+    margin: 0;
+    cursor: pointer;
+    
+    /* Style de l'icône */
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.password-toggle-btn:hover {
+    background-color: var(--accent-secondary);
+    color: var(--text-primary);
+}
+
+.password-toggle-btn i {
+    width: 18px;
+    height: 18px;
+}
+
+/* Logique d'animation et de bascule */
+@keyframes spin-in {
+    from {
+        transform: rotate(-90deg) scale(0.5);
+        opacity: 0;
+    }
+    to {
+        transform: rotate(0deg) scale(1);
+        opacity: 1;
+    }
+}
+
+.password-toggle-btn .icon-eye-off {
+    display: none; /* Cache l'œil barré par défaut */
+}
+
+.password-toggle-btn.is-showing .icon-eye {
+    display: none; /* Cache l'œil normal */
+}
+
+.password-toggle-btn.is-showing .icon-eye-off {
+    display: block; /* Montre l'œil barré */
+    animation: spin-in 0.3s ease-out;
+}
+
+/* Applique l'animation au retour */
+.password-toggle-btn:not(.is-showing) .icon-eye {
+     animation: spin-in 0.3s ease-out;
+}
