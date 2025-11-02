@@ -1,6 +1,6 @@
 /* ---
-   SSAD Attack Simulation Logic (attacks_v3.js)
-   [FINAL FIXES FOR STATS AND ICON]
+   SSAD Attack Simulation Logic
+   [MODIFIED TO STATICALLY FAIL DUE TO CAPTCHA]
    --- */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -23,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const bfSearchInput = document.getElementById('bf-search-input');
     const bfSearchClearBtn = document.getElementById('bf-clear-btn');
     const bfSearchResults = document.getElementById('bf-search-results');
-    const bfPasswordType = document.getElementById('bf-password-type');
     const bfStartBtn = document.getElementById('bf-start-btn');
 
     // --- Dictionary (Dict) Elements ---
@@ -113,7 +112,6 @@ document.addEventListener('DOMContentLoaded', () => {
         animProgress.style.transition = 'none'; 
         animProgress.style.width = '0%';
         
-        // --- [BUG FIX] Supprimer l'icône de résultat (SVG) lors de la réinitialisation
         const existingIcon = resultHeader.querySelector('svg');
         if (existingIcon) {
             existingIcon.remove();
@@ -122,7 +120,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     attackResetBtn.addEventListener('click', resetAttackUI);
 
-    // --- 2. User Search Logic (Inchangée) ---
+    // --- 2. User Search Logic (Unchanged, still needed to select a target) ---
 
     function handleAttackUserSearch(e, resultsContainer, clearBtn, onSelectCallback) {
         clearTimeout(searchDebounceTimer);
@@ -207,7 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dictStartBtn.disabled = true;
     });
 
-    // --- 3. File Dropzone Logic (Inchangée) ---
+    // --- 3. File Dropzone Logic (Unchanged) ---
 
     function handleFileSelect(file) {
         if (!file) {
@@ -256,20 +254,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
 
-    // --- 4. Attack Submission & Animation (Inchangée) ---
+    // --- 4. Attack Submission [MODIFIED] ---
+
+    // This is the static result object you requested.
+    const captchaFailureResult = {
+        found: false,
+        message: "Attack failed: CAPTCHA is present on the login form and cannot be bypassed by this script.",
+        attempts: 0,
+        time_taken: 0.0
+    };
 
     bfForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const type = bfPasswordType.value;
         const target = bfTarget.username;
         if (!target) return;
         
         setupContainer.style.display = 'none'; 
         simulationContainer.style.display = 'flex'; 
         simulationContainer.classList.add('visible'); 
-        animTitle.textContent = `Running Brute Force (${type}) on "${target}"...`;
+        animTitle.textContent = `Attempting Brute Force on "${target}"...`;
         
-        runBruteForceAttack(target, type);
+        // Simulate a 2-second "attack"
+        runStaticAttackAnimation(captchaFailureResult);
     });
     
     dictForm.addEventListener('submit', (e) => {
@@ -280,93 +286,45 @@ document.addEventListener('DOMContentLoaded', () => {
         setupContainer.style.display = 'none'; 
         simulationContainer.style.display = 'flex'; 
         simulationContainer.classList.add('visible'); 
-        animTitle.textContent = `Running Dictionary Attack on "${target}"...`;
+        animTitle.textContent = `Attempting Dictionary Attack on "${target}"...`;
         
-        runDictionaryAttack(target, dictionaryFile);
+        // Simulate a 2-second "attack"
+        runStaticAttackAnimation(captchaFailureResult);
     });
     
-    async function runAttackAnimation(attackPromise) {
+    // [NEW] Simplified animation function
+    function runStaticAttackAnimation(resultToShow) {
         
         animProgress.style.width = '0%'; 
-
-        const MIN_ANIMATION_DURATION = 3000; 
-        const animationTimer = new Promise(resolve => setTimeout(resolve, MIN_ANIMATION_DURATION));
+        const ANIMATION_DURATION = 2000; // 2 seconds
         
         animProgress.style.transition = 'none'; 
         requestAnimationFrame(() => {
             requestAnimationFrame(() => { 
-                 animProgress.style.transition = `width ${MIN_ANIMATION_DURATION}ms cubic-bezier(0.25, 1, 0.5, 1)`;
+                 animProgress.style.transition = `width ${ANIMATION_DURATION}ms cubic-bezier(0.25, 1, 0.5, 1)`;
                  animProgress.style.width = '100%';
             });
         });
 
-        let realResult;
-        try {
-            const [fetchResult] = await Promise.all([
-                attackPromise,
-                animationTimer
-            ]);
-            
-            realResult = fetchResult; 
-            
-            if (!realResult.ok) {
-                const errorData = await realResult.json();
-                throw new Error(errorData.detail || 'Attack failed');
-            }
-            
-            realResult = await realResult.json(); 
-
-        } catch (error) {
-            showNotification(error.message, 'error');
-            resetAttackUI(); 
-            return;
-        }
-
-        displayAttackResults(realResult);
-    }
-
-    function runBruteForceAttack(targetUsername, charsetType) {
-        const attackPromise = secureFetch('/passwords-and-attacks/attack/bruteforce', {
-            method: 'POST',
-            body: JSON.stringify({
-                target_username: targetUsername,
-                charset_type: charsetType
-            })
-        });
-        
-        runAttackAnimation(attackPromise);
-    }
-    
-    function runDictionaryAttack(targetUsername, file) {
-        const formData = new FormData();
-        formData.append('dictionary_file', file);
-        formData.append('target_username', targetUsername);
-
-        const attackPromise = secureFetch('/passwords-and-attacks/attack/dictionary', {
-            method: 'POST',
-            body: formData,
-            headers: { 'Content-Type': undefined } 
-        });
-        
-        runAttackAnimation(attackPromise);
+        // After animation, show the static result
+        setTimeout(() => {
+            displayAttackResults(resultToShow);
+        }, ANIMATION_DURATION);
     }
 
 
-    // --- 5. Results Display Logic (MODIFIED) ---
+    // --- 5. Results Display Logic (Unchanged from last time, already correct) ---
 
     function displayAttackResults(result) {
         simulationContainer.style.display = 'none'; 
         resultsContainer.classList.add('visible'); 
         resultsContainer.style.display = 'flex'; 
 
-        // --- [LE VRAI FIX POUR L'ICÔNE] ---
-        // Sélectionne le <svg> que Lucide crée, pas la balise <i>.
         const existingIcon = resultHeader.querySelector('svg');
         if (existingIcon) {
             existingIcon.remove();
         }
         
-        // Réinitialiser les animations
         resultTitle.style.opacity = 0;
         resultPasswordBox.style.display = 'none';
         resultMessageBox.style.display = 'none';
@@ -375,10 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultPasswordBox.style.transform = 'translateY(20px)';
         resultMessageBox.style.transform = 'translateY(20px)';
         
-        // --- [LE VRAI FIX POUR LES STATS] ---
-        // Réinitialiser la transformation sur le CONTENEUR des stats
         resultStatsBox.style.transform = 'none'; 
-        // Réinitialiser les cartes individuelles
         resultStatsBox.querySelectorAll('.attack-stat-card').forEach(card => {
             card.style.transform = 'rotateY(-90deg)';
         });
@@ -386,32 +341,37 @@ document.addEventListener('DOMContentLoaded', () => {
         attackResetBtn.style.opacity = 0;
         attackResetBtn.style.transform = 'translateY(20px)';
         
-        const iconEl = document.createElement('i'); // Crée la balise <i>
+        const iconEl = document.createElement('i'); 
+
+        const timeInMs = (result.time_taken * 1000).toFixed(2);
+        const attemptsStr = result.attempts.toLocaleString();
         
         if (result.found) {
             resultHeader.className = 'attack-result-header success';
-            resultTitle.innerHTML = 'Password Found!';
+            resultTitle.innerHTML = 'Success: Password Found!';
             iconEl.setAttribute('data-lucide', 'shield-check');
-            resultHeader.prepend(iconEl); // Ajoute <i>
+            resultHeader.prepend(iconEl);
             
             resultPasswordBox.style.display = 'flex'; 
             resultPasswordCode.textContent = result.password; 
+
+            resultMessageBox.style.display = 'block'; 
+            resultMessage.innerHTML = `<b>Attempts:</b> ${attemptsStr}<br><b>Time:</b> ${timeInMs} ms`;
+
         } else {
             resultHeader.className = 'attack-result-header fail';
             resultTitle.innerHTML = 'Attack Failed';
             iconEl.setAttribute('data-lucide', 'shield-off');
-            resultHeader.prepend(iconEl); // Ajoute <i>
+            resultHeader.prepend(iconEl);
 
             resultPasswordBox.style.display = 'none'; 
             resultMessageBox.style.display = 'block'; 
-            resultMessage.textContent = result.message || "Password not found.";
+            resultMessage.innerHTML = `${result.message || "Password not found."}<br><b>Attempts:</b> ${attemptsStr}<br><b>Time:</b> ${timeInMs} ms`;
         }
 
-        // Les stats sont définies ici, que l'attaque ait réussi ou non
-        resultAttempts.textContent = result.attempts.toLocaleString();
-        resultTime.textContent = `${result.time_taken.toFixed(4)}s`;
+        resultAttempts.textContent = attemptsStr;
+        resultTime.textContent = `${timeInMs} ms`;
         
-        // Lucide transforme <i> en <svg>
         if (typeof lucide !== 'undefined') lucide.createIcons(); 
 
         // Animer les résultats
@@ -422,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             tl.add({
-                targets: resultHeader.querySelector('svg'), // Cible le <svg>
+                targets: resultHeader.querySelector('svg'), 
                 scale: [0, 1],
                 rotate: '1turn',
                 duration: 600
@@ -432,7 +392,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 opacity: [0, 1],
             }, '-=400')
             .add({
-                // Les stats sont animées ici
                 targets: resultStatsBox.querySelectorAll('.attack-stat-card'),
                 transform: 'rotateY(0deg)',
                 delay: anime.stagger(200),
@@ -465,3 +424,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+

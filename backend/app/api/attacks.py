@@ -16,7 +16,7 @@ router = APIRouter(
 @router.get("/generate-password", response_model=schemas.GeneratedPassword)
 async def generate_new_password(password_type: int):
     """
-    Génère un mot de passe basé sur les règles du professeur.
+    Generates a password based on the professor's 3 rules.
     - Type 1: 3 car. [2, 3, 4]
     - Type 2: 5 car. [0-9]
     - Type 3: 6 car. [a-z, A-Z, 0-9, +*@!#$%]
@@ -36,11 +36,11 @@ async def attack_dictionary(
     user_id: str = Depends(get_current_user_id)
 ):
     """
-    Exécute une attaque par dictionnaire contre un utilisateur.
-    Nécessite un fichier dictionnaire .txt.
+    Executes a dictionary attack against a user.
+    Requires a .txt dictionary file.
     """
     if dictionary_file.content_type != 'text/plain':
-        raise HTTPException(status_code=400, detail="Type de fichier invalide. Veuillez uploader un .txt.")
+        raise HTTPException(status_code=400, detail="Invalid file type. Please upload a .txt.") # <-- [FIXED] Translated
         
     try:
         content_bytes = await dictionary_file.read()
@@ -51,7 +51,7 @@ async def attack_dictionary(
         return result
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Une erreur est survenue: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}") # <-- [FIXED] Translated
 
 
 # --- [CORRIGÉ] Endpoint d'Attaque Brute Force ---
@@ -63,8 +63,8 @@ async def attack_brute_force(
     user_id: str = Depends(get_current_user_id)
 ):
     """
-    Exécute une attaque brute force contre un utilisateur.
-    - charset_type: 'type1', 'type2', ou 'type3'
+    Executes a brute force attack against a user.
+    - charset_type: 'type1', 'type2', or 'type3'
     """
     try:
         # [FIX] Appel de la nouvelle fonction 'run_attack'
@@ -76,20 +76,19 @@ async def attack_brute_force(
         )
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Une erreur est survenue: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}") # <-- [FIXED] Translated
 
 # --- Endpoint MiTM (Inchangé) ---
 
 @router.get("/attack/mitm", response_model=schemas.MitmExplanation)
 async def explain_mitm():
     """
-    Explique l'attaque Man-in-the-Middle (MiTM).
+    Explains the Man-in-the-Middle (MiTM) attack.
     """
     return {
         "attack_name": "Man-in-the-Middle (MiTM)",
-        "description": "Une attaque MiTM se produit lorsqu'un attaquant se positionne secrètement entre un utilisateur et un serveur. L'attaquant peut intercepter, lire et même modifier toute la communication.",
-        "vulnerability": "Cette API fonctionne actuellement en HTTP, qui n'est pas chiffré. Un attaquant sur le même réseau Wi-Fi pourrait facilement voir les mots de passe et les tokens envoyés.",
-        "solution": "La seule solution est **HTTPS (SSL/TLS)**. HTTPS chiffre tout le trafic. Même si un attaquant intercepte les données, elles sont illisibles.",
-        "demo": "Pour démontrer, un attaquant utiliserait un outil comme Wireshark sur le même réseau pour 'sniffer' les paquets. Il verrait 'Authorization: Bearer <token...>' et le JSON du mot de passe en clair."
+        "description": "A MiTM attack occurs when an attacker secretly positions themselves between a user and a server. The attacker can intercept, read, and even modify all communication.",
+        "vulnerability": "This API currently operates over HTTP, which is unencrypted. An attacker on the same Wi-Fi network could easily see passwords and tokens being sent.",
+        "solution": "The only solution is **HTTPS (SSL/TLS)**. HTTPS encrypts all traffic. Even if an attacker intercepts the data, it is unreadable.",
+        "demo": "To demonstrate, an attacker would use a tool like Wireshark on the same network to 'sniff' packets. They would see 'Authorization: Bearer <token...>' and the password JSON in plaintext."
     }
-

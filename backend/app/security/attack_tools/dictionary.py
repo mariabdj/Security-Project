@@ -11,42 +11,43 @@ def run_attack(target_username: str, dictionary_content: str):
     try:
         response = supabase.table("users").select("password_hash").eq("username", target_username).execute()
         if not response.data:
-            raise ValueError("Utilisateur cible non trouvé.")
-        # [FIX] Utiliser .strip() pour enlever les espaces blancs accidentels
+            raise ValueError("Target user not found.") 
         real_password = response.data[0]['password_hash'].strip() 
     except Exception as e:
-        raise ValueError(f"Erreur Supabase: {str(e)}")
+        raise ValueError(f"Supabase error: {str(e)}")
 
-    # 2. Diviser le dictionnaire en une liste de mots
     word_list = dictionary_content.splitlines()
     
-    # 3. Lancer l'attaque
     start_time = time.time()
     attempts = 0
     found_password = None
 
     for word in word_list:
+        
+        # --- [MODIFIED] ---
+        # Add a small delay to simulate a real-world request
+        # This demonstrates how rate limiting slows down an attack.
+        time.sleep(0.05) # 50 millisecond delay per attempt
+        # --- [END MODIFICATION] ---
+
         attempts += 1
-        # [FIX] Utiliser .strip() pour nettoyer les mots du dictionnaire
         if word.strip() == real_password:
             found_password = word.strip()
-            break # Arrêter dès que le mot est trouvé
+            break 
 
     end_time = time.time()
 
-    # 4. Retourner le résultat
     if found_password:
         return {
             "found": True,
-            "password": found_password, # Renvoyer le mot de passe trouvé
+            "password": found_password, 
             "attempts": attempts,
             "time_taken": round(end_time - start_time, 4)
         }
     else:
         return {
             "found": False,
-            "message": "Mot de passe non trouvé dans le dictionnaire.",
+            "message": "Password not found in the dictionary.", 
             "attempts": attempts,
             "time_taken": round(end_time - start_time, 4)
         }
-

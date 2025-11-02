@@ -11,6 +11,9 @@
     
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
+    <!-- [MODIFIED] Added reCAPTCHA script -->
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
     <link rel="stylesheet" href="css/style.css">
     
     <link rel="stylesheet" href="css/auth.css">
@@ -50,8 +53,19 @@
                                 </button>
                             </div>
                         </div>
+
+                        <!-- [MODIFIED] Added reCAPTCHA element -->
+                        <!-- Use the site key you provided -->
+                        <div class="g-recaptcha" 
+                             data-sitekey="6LdIvv8rAAAAACm5ju0zhxpkBr2X7GMWZf-o3haD"
+                             data-callback="onCaptchaSuccess"
+                             data-expired-callback="onCaptchaExpired">
+                        </div>
+
+                        <!-- [MODIFIED] Added Lockout Timer Display -->
+                        <div id="lockout-timer" class="lockout-timer" style="display: none;"></div>
                         
-                        <button type="submit" class="btn btn-primary" id="login-btn">
+                        <button type="submit" class="btn btn-primary" id="login-btn" disabled> <!-- [MODIFIED] Disabled by default -->
                             <span>Login</span>
                             <div class="loader"></div>
                         </button>

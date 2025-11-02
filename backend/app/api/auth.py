@@ -3,11 +3,36 @@ from fastapi import APIRouter, HTTPException, status
 from ..models import schemas
 from ..core.supabase_client import supabase
 from ..security.security import get_password_hash, verify_password, create_access_token
+import os
+import httpx
+from datetime import datetime, timedelta, timezone
 
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"]
 )
+
+RECAPTCHA_SECRET_KEY = os.environ.get("RECAPTCHA_SECRET_KEY")
+CAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify"
+
+async def verify_captcha(token: str) -> bool:
+    """Helper function to verify a reCAPTCHA token."""
+    if not RECAPTCHA_SECRET_KEY:
+        # If no key is set, log a warning but allow login (for development)
+        print("Warning: RECAPTCHA_SECRET_KEY is not set. Skipping CAPTCHA verification.")
+        return True 
+        
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                CAPTCHA_VERIFY_URL,
+                data={"secret": RECAPTCHA_SECRET_KEY, "response": token}
+            )
+            response.raise_for_status() # Raise exception for 4xx/5xx errors
+            return response.json().get("success", False)
+        except Exception as e:
+            print(f"CAPTCHA verification HTTP request failed: {e}")
+            return False
 
 @router.post("/signup", response_model=schemas.User)
 async def signup(user: schemas.UserCreate):
@@ -19,13 +44,15 @@ async def signup(user: schemas.UserCreate):
             detail="Username already registered",
         )
 
-    # 2. Hash the password - (CHANGED)
+    # 2. Hash the password
     hashed_password = get_password_hash(user.password)
 
     # 3. Insert the new user into the public.users table
     new_user_data = {
         "username": user.username,
-        "password_hash": hashed_password
+        "password_hash": hashed_password,
+        "failed_login_attempts": 0, # <-- [MODIFIED] Initialize new field
+        "lockout_until": None      # <-- [MODIFIED] Initialize new field
     }
     
     try:
@@ -50,29 +77,95 @@ async def signup(user: schemas.UserCreate):
 
 @router.post("/login", response_model=schemas.Token)
 async def login(form_data: schemas.UserLogin):
-    # 1. Find the user by username
-    response = supabase.table("users").select("id, username, password_hash").eq("username", form_data.username).execute()
+    
+    # --- [MODIFIED] Part 1: CAPTCHA Verification ---
+    if not form_data.captcha_token:
+        raise HTTPException(status_code=400, detail="CAPTCHA token is required.")
+        
+    is_captcha_valid = await verify_captcha(form_data.captcha_token)
+    if not is_captcha_valid:
+        raise HTTPException(status_code=400, detail="CAPTCHA verification failed. Please try again.")
+    
+    # --- [MODIFIED] Part 2: Rate Limiting and Login Logic ---
+    
+    # 1. Find the user
+    try:
+        response = supabase.table("users").select(
+            "id, username, password_hash, failed_login_attempts, lockout_until"
+        ).eq("username", form_data.username).execute()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {e}")
     
     if not response.data:
+        # User not found, but we don't tell them.
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=401, # Use 401 for security
             detail="Incorrect username or password"
         )
     
     user_data = response.data[0]
+    now = datetime.now(timezone.utc)
 
-    # 2. Verify the password - (CHANGED)
+    # 2. Check for existing lockout
+    if user_data.get("lockout_until"):
+        # Supabase stores timestamps with timezone, so we parse it directly
+        try:
+            lockout_time = datetime.fromisoformat(user_data["lockout_until"])
+        except ValueError:
+            # Handle potential null or invalid format, though it shouldn't happen
+            lockout_time = now - timedelta(seconds=1) # Treat as expired
+
+        if lockout_time > now:
+            wait_seconds = (lockout_time - now).total_seconds()
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Too many failed attempts. Please wait {int(wait_seconds)} seconds."
+            )
+
+    # 3. Verify the password
     is_password_correct = verify_password(form_data.password, user_data["password_hash"])
     
     if not is_password_correct:
+        # --- Password is WRONG: Apply lockout ---
+        
+        current_attempts = user_data.get("failed_login_attempts", 0) + 1
+        lockout_duration_seconds = 0
+        
+        if current_attempts == 1:
+            lockout_duration_seconds = 30 # 30 seconds
+        elif current_attempts == 2:
+            lockout_duration_seconds = 60 # 1 minute
+        else:
+            # 3rd attempt and all future attempts
+            lockout_duration_seconds = 300 # 5 minutes
+            
+        new_lockout_until = now + timedelta(seconds=lockout_duration_seconds)
+        
+        try:
+            supabase.table("users").update({
+                "failed_login_attempts": current_attempts,
+                "lockout_until": new_lockout_until.isoformat()
+            }).eq("id", user_data["id"]).execute()
+        except Exception as e:
+            print(f"Failed to update lockout: {e}") # Log error but continue
+
+        # Return the lockout time to the user
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Incorrect username or password. Please wait {lockout_duration_seconds} seconds."
         )
 
-    # 3. Create the access token - (CHANGED)
-    # The 'id' becomes the 'sub' (subject) in the token
+    # 4. Password is CORRECT: Reset attempts and create token
+    try:
+        # Only update if they actually had failed attempts
+        if user_data.get("failed_login_attempts", 0) > 0 or user_data.get("lockout_until") is not None:
+            supabase.table("users").update({
+                "failed_login_attempts": 0,
+                "lockout_until": None
+            }).eq("id", user_data["id"]).execute()
+    except Exception as e:
+        print(f"Failed to reset lockout on success: {e}") # Log error but continue
+
     token_data = {"id": str(user_data["id"]), "username": user_data["username"]}
     access_token = create_access_token(data=token_data)
 

@@ -1,10 +1,10 @@
 # backend/app/models/schemas.py
 from datetime import datetime
 from pydantic import BaseModel
-from typing import Optional, List # Assurez-vous que List est importé
+from typing import Optional, List
 import uuid
 
-# --- Schémas Utilisateur & Auth (Inchangés) ---
+# --- User & Auth Schemas ---
 
 class UserCreate(BaseModel):
     username: str
@@ -13,6 +13,7 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     username: str
     password: str
+    captcha_token: Optional[str] = None # <-- [MODIFIED] Added CAPTCHA token
 
 class User(BaseModel):
     id: uuid.UUID
@@ -28,7 +29,7 @@ class Token(BaseModel):
 class TokenData(BaseModel):
     username: Optional[str] = None
 
-# --- Schémas Chat (Inchangés) ---
+# --- Chat Schemas ---
 
 class ChatRequestCreate(BaseModel):
     receiver_id: uuid.UUID
@@ -62,7 +63,7 @@ class ChatRequestDetails(BaseModel):
 class ChatRequestUpdate(BaseModel):
     status: str
 
-# --- Schémas Messages (Inchangés) ---
+# --- Message Schemas ---
 
 class MessageCreate(BaseModel):
     encrypted_content: str
@@ -79,7 +80,7 @@ class Message(BaseModel):
     class Config:
         from_attributes = True
 
-# --- [CORRIGÉ] Schémas Mots de Passe & Attaques ---
+# --- Password & Attack Schemas ---
 
 class GeneratedPassword(BaseModel):
     password_type: int
@@ -90,11 +91,10 @@ class AttackRequest(BaseModel):
 
 class BruteForceRequest(AttackRequest):
     charset_type: str # 'type1', 'type2', 'type3'
-    # max_length a été supprimé
 
 class AttackResult(BaseModel):
     found: bool
-    password: Optional[str] = None # Ce champ est la "sortie"
+    password: Optional[str] = None
     attempts: int
     time_taken: float
     message: Optional[str] = None
@@ -106,12 +106,12 @@ class MitmExplanation(BaseModel):
     solution: str
     demo: str
 
-# --- Schémas Stockage (Inchangés) ---
+# --- Storage Schemas ---
 
 class FileUploadResponse(BaseModel):
     file_url: str
 
-# --- Schémas Crypto & Visualisation (Inchangés) ---
+# --- Crypto & Visualization Schemas ---
 
 class VisualizeRequest(BaseModel):
     text: str
@@ -128,7 +128,7 @@ class VisualizationResponse(BaseModel):
     algorithm: str
     original_text: str
     final_text: str
-    steps: List[VisualizationStep] # Utiliser List importé
+    steps: List[VisualizationStep]
 
 class CryptoRequest(BaseModel):
     text: str
@@ -139,4 +139,3 @@ class CryptoRequest(BaseModel):
 
 class CryptoResponse(BaseModel):
     result_text: str
-

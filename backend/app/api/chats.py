@@ -15,10 +15,10 @@ router = APIRouter(
     tags=["Chats"]
 )
 
-# --- Fonctions d'aide (Inchangées) ---
+# --- Helper Functions ---
 
 def get_supabase_headers(token: str, content_type: str = "application/json"):
-    """Crée les en-têtes standard pour une requête Supabase authentifiée."""
+    """Creates standard headers for an authenticated Supabase request."""
     return {
         "Authorization": f"Bearer {token}",
         "Content-Type": content_type,
@@ -26,13 +26,13 @@ def get_supabase_headers(token: str, content_type: str = "application/json"):
     }
 
 def get_supabase_url():
-    """Récupère l'URL Supabase depuis les variables d'environnement."""
+    """Gets the Supabase URL from environment variables."""
     url = os.environ.get("SUPABASE_URL")
     if not url:
-        raise HTTPException(status_code=500, detail="SUPABASE_URL non configuré")
+        raise HTTPException(status_code=500, detail="SUPABASE_URL not configured")
     return url
 
-# --- [MODIFIÉ] Endpoint de Création de Demande ---
+# --- [MODIFIED] Chat Request Creation Endpoint ---
 
 @router.post("/request", response_model=schemas.ChatRequest)
 async def create_chat_request(
@@ -41,59 +41,59 @@ async def create_chat_request(
     creds: HTTPAuthorizationCredentials = Depends(oauth2_scheme)
 ):
     """
-    Envoie une demande de chat à un autre utilisateur.
+    Sends a chat request to another user.
     """
     
     sender_uuid = uuid.UUID(sender_id)
     
-    # 1. Vérifier si l'utilisateur essaie de chatter avec lui-même
+    # 1. Check if user is trying to chat with themselves
     if sender_uuid == request_data.receiver_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Vous ne pouvez pas vous envoyer une demande de chat."
+            detail="You cannot send a chat request to yourself."
         )
 
-    # 2. [MODIFIÉ] Valider les 'encryption_params' en fonction de la méthode
+    # 2. [MODIFIED] Validate 'encryption_params' based on method
     params = request_data.encryption_params
     method = request_data.encryption_method
 
     try:
         if method == "caesar":
             if "shift" not in params or not isinstance(params["shift"], int):
-                raise ValueError("Le paramètre 'shift' (entier) est requis pour César.")
+                raise ValueError("The 'shift' parameter (integer) is required for Caesar.")
         elif method == "playfair":
             if "key" not in params or not isinstance(params["key"], str):
-                raise ValueError("Le paramètre 'key' (chaîne) est requis pour Playfair.")
+                raise ValueError("The 'key' parameter (string) is required for Playfair.")
             if "size" not in params or not isinstance(params["size"], int):
-                raise ValueError("Le paramètre 'size' (entier) est requis for Playfair.")
+                raise ValueError("The 'size' parameter (integer) is required for Playfair.")
             if params["size"] not in [5, 6]:
-                raise ValueError("La taille pour Playfair doit être 5 ou 6.")
+                raise ValueError("Size for Playfair must be 5 or 6.")
         elif method == "hill":
             if "key" not in params or not isinstance(params["key"], str):
-                raise ValueError("Le paramètre 'key' (chaîne) est requis pour Hill.")
+                raise ValueError("The 'key' parameter (string) is required for Hill.")
             if "size" not in params or not isinstance(params["size"], int):
-                raise ValueError("Le paramètre 'size' (entier) est requis pour Hill.")
+                raise ValueError("The 'size' parameter (integer) is required for Hill.")
             if params["size"] not in [2, 3]:
-                raise ValueError("La taille pour Hill doit être 2 ou 3.")
+                raise ValueError("Size for Hill must be 2 or 3.")
         else:
-            raise ValueError(f"Méthode de chiffrement '{method}' non supportée.")
+            raise ValueError(f"Encryption method '{method}' not supported.")
             
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Paramètres d'encryption invalides: {e}")
+         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid encryption parameters: {e}")
 
 
-    # 3. Préparer la nouvelle demande pour la base de données
+    # 3. Prepare new request for the database
     new_request_data = {
         "sender_id": sender_id,
         "receiver_id": str(request_data.receiver_id),
         "encryption_method": method,
-        "encryption_params": params, # 'params' a été validé
+        "encryption_params": params, # 'params' has been validated
         "status": "pending"
     }
 
-    # 4. Insérer la nouvelle demande de chat
+    # 4. Insert the new chat request
     try:
         supabase_url = get_supabase_url()
         token = creds.credentials
@@ -110,19 +110,19 @@ async def create_chat_request(
         return response.json()[0] 
 
     except Exception as e:
-        error_detail = f"Une erreur est survenue: {str(e)}"
+        error_detail = f"An error occurred: {str(e)}"
         if hasattr(e, 'response'):
-             error_detail = f"Erreur de Supabase: {e.response.text}"
+             error_detail = f"Supabase error: {e.response.text}"
              if "unique_chat_request" in e.response.text:
                  raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
-                    detail="Une demande de chat à cet utilisateur existe déjà."
+                    detail="A chat request to this user already exists."
                  )
         
         raise HTTPException(status_code=500, detail=error_detail)
     
 
-# --- Autres Endpoints (Inchangés) ---
+# --- Other Endpoints ---
 
 @router.get("/requests", response_model=List[schemas.ChatRequestDetails])
 async def get_chat_requests(
@@ -130,7 +130,7 @@ async def get_chat_requests(
     creds: HTTPAuthorizationCredentials = Depends(oauth2_scheme)
 ):
     """
-    Récupère toutes les demandes de chat pour l'utilisateur connecté.
+    Retrieves all chat requests for the logged-in user.
     """
     try:
         supabase_url = get_supabase_url()
@@ -154,11 +154,11 @@ async def get_chat_requests(
         if not data:
             return []
 
-        # Reformater les données pour correspondre au schéma ChatRequestDetails
+        # Reformat data to match ChatRequestDetails schema
         formatted_data = []
         for item in response.json():
-            sender_username = item.get('sender', {}).get('username', 'Inconnu')
-            receiver_username = item.get('receiver', {}).get('username', 'Inconnu')
+            sender_username = item.get('sender', {}).get('username', 'Unknown')
+            receiver_username = item.get('receiver', {}).get('username', 'Unknown')
 
             details = schemas.ChatRequestDetails(
                 id=item['id'],
@@ -175,9 +175,9 @@ async def get_chat_requests(
         return formatted_data
 
     except Exception as e:
-        error_detail = f"Une erreur est survenue: {str(e)}"
+        error_detail = f"An error occurred: {str(e)}"
         if hasattr(e, 'response'):
-             error_detail = f"Erreur de Supabase: {e.response.text}"
+             error_detail = f"Supabase error: {e.response.text}"
         raise HTTPException(status_code=500, detail=error_detail)
 
 
@@ -189,14 +189,14 @@ async def respond_to_chat_request(
     creds: HTTPAuthorizationCredentials = Depends(oauth2_scheme)
 ):
     """
-    Permet à un utilisateur d'accepter ou de rejeter une demande de chat.
+    Allows a user to accept or reject a chat request.
     """
     
     new_status = response_data.status
     if new_status not in ["accepted", "rejected"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Le statut doit être 'accepted' ou 'rejected'"
+            detail="Status must be 'accepted' or 'rejected'"
         )
 
     try:
@@ -225,15 +225,15 @@ async def respond_to_chat_request(
         if not data:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Demande en attente non trouvée ou permission refusée."
+                detail="Pending request not found or permission denied."
             )
             
         return data[0]
 
     except Exception as e:
-        error_detail = f"Une erreur est survenue: {str(e)}"
+        error_detail = f"An error occurred: {str(e)}"
         if hasattr(e, 'response'):
-             error_detail = f"Erreur de Supabase: {e.response.text}"
+             error_detail = f"Supabase error: {e.response.text}"
         raise HTTPException(status_code=500, detail=error_detail)
     
 
@@ -245,7 +245,7 @@ async def send_message(
     creds: HTTPAuthorizationCredentials = Depends(oauth2_scheme)
 ):
     """
-    Envoie un message à un chat accepté.
+    Sends a message to an accepted chat.
     """
     
     new_message_data = {
@@ -270,14 +270,14 @@ async def send_message(
         
         data = response.json()
         if not data:
-            raise HTTPException(status_code=500, detail="Impossible d'envoyer le message.")
+            raise HTTPException(status_code=500, detail="Could not send message.")
             
         return data[0]
 
     except Exception as e:
-        error_detail = f"Une erreur est survenue: {str(e)}"
+        error_detail = f"An error occurred: {str(e)}"
         if hasattr(e, 'response'):
-             error_detail = f"Erreur de Supabase: {e.response.text}"
+             error_detail = f"Supabase error: {e.response.text}"
         raise HTTPException(status_code=500, detail=error_detail)
 
 
@@ -288,7 +288,7 @@ async def get_messages(
     creds: HTTPAuthorizationCredentials = Depends(oauth2_scheme)
 ):
     """
-    Récupère tous les messages d'un chat accepté.
+    Retrieves all messages from an accepted chat.
     """
     
     try:
@@ -313,7 +313,7 @@ async def get_messages(
         return response.json()
 
     except Exception as e:
-        error_detail = f"Une erreur est survenue: {str(e)}"
+        error_detail = f"An error occurred: {str(e)}"
         if hasattr(e, 'response'):
-             error_detail = f"Erreur de Supabase: {e.response.text}"
+             error_detail = f"Supabase error: {e.response.text}"
         raise HTTPException(status_code=500, detail=error_detail)

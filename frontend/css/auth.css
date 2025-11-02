@@ -6,9 +6,9 @@
 /* 1. Auth Page Layout
    ----------------------------- */
 
-/* This prevents scrolling on the auth page */
+/* [MODIFIED] Allow scrolling if card is too tall */
 html, body {
-    overflow: hidden;
+    overflow: auto; /* <-- FIXED: Was 'hidden' */
 }
 
 .auth-container {
@@ -36,18 +36,19 @@ html, body {
     width: 100%;
     max-width: 420px;
     background-color: transparent;
-    /* Let the inner content define the height */
+    /* Add a little margin for spacing when scrolling */
+    margin: 2rem 0; 
 }
 
 .auth-card-inner {
     position: relative;
     width: 100%;
-    height: 100%;
     /* This allows the card to flip */
     transform-style: preserve-3d;
     transition: transform 0.8s cubic-bezier(0.76, 0, 0.24, 1);
-    /* Set min-height here so container has a size */
-    min-height: 500px; 
+    
+    /* Use grid to dynamically size the card to the TALLEST face */
+    display: grid;
 }
 
 /* This is the JS hook that performs the flip */
@@ -56,10 +57,10 @@ html, body {
 }
 
 .auth-card-face {
-    /* FIXED: Re-instated position: absolute */
-    position: absolute;
+    /* Stack both faces in the same grid cell */
+    grid-area: 1 / 1;
+    
     width: 100%;
-    height: 100%;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
     
@@ -75,9 +76,6 @@ html, body {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    
-    /* FIXED: Removed min-height to prevent scrolling */
-    /* min-height: 570px; */ 
 }
 
 .auth-card-face.auth-card-back {
@@ -175,12 +173,14 @@ html, body {
         position: static; /* Disable absolute positioning */
         min-height: 0;
         transform-style: flat;
+        display: block; /* [MODIFIED] Revert grid for mobile */
     }
     
     .auth-card-face {
         position: static; /* Disable absolute positioning */
         padding: 2rem 1.5rem;
         transform: none !important; /* Disable all transforms */
+        grid-area: auto; /* [MODIFIED] Revert grid for mobile */
     }
 
     /* On mobile, we hide/show instead of flip */
@@ -220,7 +220,7 @@ html, body {
 }
 
 
-/* --- [NOUVEAU] Styles pour le bouton Oeil (Show/Hide Password) --- */
+/* --- [MODIFIED] Styles for Password Toggle Button --- */
 
 .password-input-wrapper {
     position: relative;
@@ -292,4 +292,25 @@ html, body {
 /* Applique l'animation au retour */
 .password-toggle-btn:not(.is-showing) .icon-eye {
      animation: spin-in 0.3s ease-out;
+}
+
+/* --- [NEW] Styles for CAPTCHA & Lockout Timer --- */
+
+.g-recaptcha {
+    margin: 1.5rem 0;
+    display: flex;
+    justify-content: center;
+    /* The widget itself is hard to style, but we can center it */
+}
+
+.lockout-timer {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--error);
+    background-color: color-mix(in srgb, var(--error) 15%, transparent);
+    border: 1px solid color-mix(in srgb, var(--error) 30%, transparent);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
 }

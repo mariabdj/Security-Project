@@ -73,6 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const keyPromptCancel = document.getElementById('chat-key-prompt-cancel');
     const keyPromptMethod = document.getElementById('chat-key-prompt-method');
     const keyPromptInput = document.getElementById('chat-key-prompt-input');
+    const reqSendBtn = document.getElementById('chat-send-request-btn');
 
     // --- INITIALIZATION & POLLING (Inchangés) ---
     
