@@ -21,4 +21,4 @@ COPY backend /app/backend
 # The web server is Uvicorn, which will run the FastAPI app
 # We tell it to run 'main:app' from the 'backend.app' directory.
 # This assumes your main.py is inside backend/app/.
-CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "backend.app.main:app", "--app-dir", "/app", "--host", "0.0.0.0", "--port", "8080"]
