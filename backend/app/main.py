@@ -2,8 +2,8 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.supabase_client import supabase
-from app.api import auth, users, chats, attacks, storage, visualize, crypto
+from .core.supabase_client import supabase
+from .api import auth, users, chats, attacks, storage, visualize, crypto
 
 app = FastAPI(
     title="TP1-SSAD Security Framework API",
