@@ -1,6 +1,6 @@
 /* ---
    SSAD Attack Simulation Logic
-   [MODIFIED TO STATICALLY FAIL DUE TO CAPTCHA]
+   [MODIFIED TO SIMULATE CAPTCHA BLOCK]
    --- */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const bfSearchInput = document.getElementById('bf-search-input');
     const bfSearchClearBtn = document.getElementById('bf-clear-btn');
     const bfSearchResults = document.getElementById('bf-search-results');
+    const bfPasswordType = document.getElementById('bf-password-type');
     const bfStartBtn = document.getElementById('bf-start-btn');
 
     // --- Dictionary (Dict) Elements ---
@@ -120,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     attackResetBtn.addEventListener('click', resetAttackUI);
 
-    // --- 2. User Search Logic (Unchanged, still needed to select a target) ---
+    // --- 2. User Search Logic (Unchanged) ---
 
     function handleAttackUserSearch(e, resultsContainer, clearBtn, onSelectCallback) {
         clearTimeout(searchDebounceTimer);
@@ -256,26 +257,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 4. Attack Submission [MODIFIED] ---
 
-    // This is the static result object you requested.
-    const captchaFailureResult = {
-        found: false,
-        message: "Attack failed: CAPTCHA is present on the login form and cannot be bypassed by this script.",
-        attempts: 0,
-        time_taken: 0.0
-    };
-
-    bfForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const target = bfTarget.username;
-        if (!target) return;
-        
+    // [NEW] This function replaces all backend calls
+    async function simulateBlockedAttack(title) {
+        // 1. Show simulation screen
         setupContainer.style.display = 'none'; 
         simulationContainer.style.display = 'flex'; 
         simulationContainer.classList.add('visible'); 
-        animTitle.textContent = `Attempting Brute Force on "${target}"...`;
+        animTitle.textContent = `Simulating ${title}...`;
+
+        // 2. Run fake progress bar
+        animProgress.style.width = '0%'; 
+        animProgress.style.transition = 'none'; 
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => { 
+                 animProgress.style.transition = `width 2000ms cubic-bezier(0.25, 1, 0.5, 1)`;
+                 animProgress.style.width = '100%';
+            });
+        });
+
+        // 3. Wait for animation to finish
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // 4. Create static "failed" result
+        const result = {
+            found: false,
+            message: "Attack Failed: CAPTCHA protection is active and cannot be bypassed by this script.",
+            attempts: 0,
+            time_taken: 0.0
+        };
+
+        // 5. Display the static result
+        displayAttackResults(result);
+    }
+
+    bfForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const type = bfPasswordType.value;
+        const target = bfTarget.username;
+        if (!target) return;
         
-        // Simulate a 2-second "attack"
-        runStaticAttackAnimation(captchaFailureResult);
+        simulateBlockedAttack(`Brute Force (${type}) on "${target}"`);
     });
     
     dictForm.addEventListener('submit', (e) => {
@@ -283,37 +304,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const target = dictTarget.username;
         if (!target || !dictionaryFile) return;
 
-        setupContainer.style.display = 'none'; 
-        simulationContainer.style.display = 'flex'; 
-        simulationContainer.classList.add('visible'); 
-        animTitle.textContent = `Attempting Dictionary Attack on "${target}"...`;
-        
-        // Simulate a 2-second "attack"
-        runStaticAttackAnimation(captchaFailureResult);
+        simulateBlockedAttack(`Dictionary Attack on "${target}"`);
     });
     
-    // [NEW] Simplified animation function
-    function runStaticAttackAnimation(resultToShow) {
-        
-        animProgress.style.width = '0%'; 
-        const ANIMATION_DURATION = 2000; // 2 seconds
-        
-        animProgress.style.transition = 'none'; 
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => { 
-                 animProgress.style.transition = `width ${ANIMATION_DURATION}ms cubic-bezier(0.25, 1, 0.5, 1)`;
-                 animProgress.style.width = '100%';
-            });
-        });
-
-        // After animation, show the static result
-        setTimeout(() => {
-            displayAttackResults(resultToShow);
-        }, ANIMATION_DURATION);
-    }
-
-
-    // --- 5. Results Display Logic (Unchanged from last time, already correct) ---
+    // --- 5. Results Display Logic (Unchanged from previous step) ---
+    // This function will now be called by simulateBlockedAttack()
 
     function displayAttackResults(result) {
         simulationContainer.style.display = 'none'; 
@@ -325,6 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
             existingIcon.remove();
         }
         
+        // Reset animations
         resultTitle.style.opacity = 0;
         resultPasswordBox.style.display = 'none';
         resultMessageBox.style.display = 'none';
@@ -343,6 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const iconEl = document.createElement('i'); 
 
+        // Convert time to milliseconds
         const timeInMs = (result.time_taken * 1000).toFixed(2);
         const attemptsStr = result.attempts.toLocaleString();
         
@@ -360,21 +357,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         } else {
             resultHeader.className = 'attack-result-header fail';
-            resultTitle.innerHTML = 'Attack Failed';
+            resultTitle.innerHTML = 'Attack Failed'; // Title is simple "Attack Failed"
             iconEl.setAttribute('data-lucide', 'shield-off');
             resultHeader.prepend(iconEl);
 
             resultPasswordBox.style.display = 'none'; 
             resultMessageBox.style.display = 'block'; 
-            resultMessage.innerHTML = `${result.message || "Password not found."}<br><b>Attempts:</b> ${attemptsStr}<br><b>Time:</b> ${timeInMs} ms`;
+            // The main message is now the custom one
+            resultMessage.innerHTML = `${result.message}<br><b>Attempts:</b> ${attemptsStr}<br><b>Time:</b> ${timeInMs} ms`;
         }
 
+        // Update the stat cards
         resultAttempts.textContent = attemptsStr;
         resultTime.textContent = `${timeInMs} ms`;
         
         if (typeof lucide !== 'undefined') lucide.createIcons(); 
 
-        // Animer les résultats
+        // Animate results
         if (typeof anime !== 'undefined') {
             const tl = anime.timeline({
                 easing: 'easeOutExpo',
