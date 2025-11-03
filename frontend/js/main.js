@@ -4,7 +4,7 @@
    --- */
 
 // --- Global Configuration ---
-const API_URL = 'http://127.0.0.1:8000';
+const API_URL = 'https://security-app-ssad.fly.dev';
 const TOKEN = localStorage.getItem('ssad_token');
 const CURRENT_USERNAME = localStorage.getItem('ssad_username');
 

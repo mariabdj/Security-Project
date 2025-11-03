@@ -1,0 +1,18 @@
+# .dockerignore in the root directory (C:\Users\Pc\Desktop\TP1-SSAD)
+
+# 1. IGNORE LOCAL PROJECT FILES
+.git
+.gitignore
+.qodo
+.vscode
+
+# 2. IGNORE FRONTEND FOLDER (Not needed for backend deployment)
+frontend
+
+# 3. IGNORE VIRTUAL ENVIRONMENT (Located inside 'backend' folder)
+backend/venv
+
+# 4. IGNORE PYTHON ARTIFACTS (Python cache files, wherever they are)
+**/__pycache__
+**/*.pyc
+.mypy_cache

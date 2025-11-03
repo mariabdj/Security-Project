@@ -30,7 +30,7 @@ function onCaptchaExpired() {
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- Configuration ---
-    const API_URL = 'http://127.0.0.1:8000'; // Your local backend URL
+    const API_URL = 'https://security-app-ssad.fly.dev';
 
     // --- Element Selection ---
     const authCard = document.getElementById('auth-card');
