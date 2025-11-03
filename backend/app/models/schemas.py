@@ -1,7 +1,7 @@
 # backend/app/models/schemas.py
 from datetime import datetime
-from pydantic import BaseModel
-from typing import Optional, List
+from pydantic import BaseModel, Field
+from typing import Optional, List, Any
 import uuid
 
 # --- User & Auth Schemas ---
@@ -110,6 +110,22 @@ class MitmExplanation(BaseModel):
 
 class FileUploadResponse(BaseModel):
     file_url: str
+    
+# --- [NEW] Steganography Visualization Schemas ---
+
+class StegoVisualizeRequest(BaseModel):
+    secret_message: str
+    
+class StegoVisualizationStep(BaseModel):
+    step_title: str
+    description: str
+    media_type: str
+    mode: str # 'encode' or 'decode'
+    data: dict = Field(..., description="Contextual data for the frontend to render the animation.")
+    
+class StegoVisualizationResponse(BaseModel):
+    steps: List[StegoVisualizationStep]
+    final_result_data: dict # To contain final encoded data URL/Stats
 
 # --- Crypto & Visualization Schemas ---
 

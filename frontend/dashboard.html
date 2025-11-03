@@ -471,8 +471,11 @@
                     <div class="viz-tab-panel" id="attack-tab-mitm">
                         <div class="attack-placeholder">
                             <i data-lucide="construction"></i>
-                            <h2>To be continued...</h2>
-                            <p>This simulation will be available once the live network capture is implemented.</p>
+                            <h2>Man-in-the-Middle Attack</h2>
+                            <p>This attack is a vulnerability explanation rather than a live simulation. MiTM vulnerability exists because the application is run over HTTP (non-secure connection) in this demo environment.</p>
+                            <div class="attack-mitm-explanation">
+                                <h3>To be continued</h3>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -528,51 +531,71 @@
                     <button class="viz-tab active" data-tab="encode">Encode Message</button>
                     <button class="viz-tab" data-tab="decode">Decode Message</button>
                 </div>
-                <div class="stego-content">
-                    <p class="viz-description" id="stego-description">Hide a secret text message inside an image, audio (.wav), or video file.</p>
-                    <div class="stego-file-type-selector">
-                        <label>Select File Type:</label>
-                        <div class="stego-radio-group">
-                            <label>
-                                <input type="radio" name="stegoFileType" value="image" checked>
-                                <i data-lucide="image"></i> Image
+                <div class="stego-content-wrapper">
+                    <div class="stego-setup-container" id="stego-setup-container">
+                        <p class="viz-description" id="stego-description">Hide a secret text message inside an image, audio (.wav), or video file.</p>
+                        <div class="stego-file-type-selector">
+                            <label>Select File Type:</label>
+                            <div class="stego-radio-group">
+                                <label>
+                                    <input type="radio" name="stegoFileType" value="image" checked>
+                                    <i data-lucide="image"></i> Image
+                                </label>
+                                <label>
+                                    <input type="radio" name="stegoFileType" value="audio">
+                                    <i data-lucide="audio-lines"></i> Audio (.wav)
+                                </label>
+                                <label>
+                                    <input type="radio" name="stegoFileType" value="video">
+                                    <i data-lucide="video"></i> Video
+                                </label>
+                            </div>
+                        </div>
+                        <div class="stego-file-input-area">
+                            <input type="file" id="stego-file-input" accept="image/*" hidden>
+                            <label for="stego-file-input" class="attack-file-label stego-file-label" id="stego-file-dropzone">
+                                <i data-lucide="upload-cloud" id="stego-file-icon"></i>
+                                <span id="stego-file-name">Click to select file...</span>
                             </label>
-                            <label>
-                                <input type="radio" name="stegoFileType" value="audio">
-                                <i data-lucide="audio-lines"></i> Audio (.wav)
-                            </label>
-                            <label>
-                                <input type="radio" name="stegoFileType" value="video">
-                                <i data-lucide="video"></i> Video
-                            </label>
+                            <div id="stego-file-preview"></div> 
+                        </div>
+                        <div class="input-group" id="stego-secret-message-group">
+                            <label for="stego-secret-message">Secret Message to Hide</label>
+                            <textarea id="stego-secret-message" rows="4" placeholder="Enter the text you want to conceal..."></textarea>
+                            <p class="stego-message-info" id="stego-capacity-info"></p>
+                        </div>
+                        <div class="stego-actions">
+                            <button class="btn btn-primary" id="stego-start-viz-btn" aria-label="Start Visualization">
+                                <i data-lucide="play-circle"></i><span>Start Visualization</span><div class="loader"></div>
+                            </button>
+                        </div>
+                    </div> 
+
+                    <div class="stego-anim-container" id="stego-anim-container" style="display: none;">
+                        <div class="anim-player">
+                            <div class="anim-header">
+                                <h3 id="stego-anim-step-title">Step Title</h3>
+                                <div class="anim-nav">
+                                    <span id="stego-anim-step-counter">Step 1 / X</span>
+                                    <button class="btn btn-secondary btn-icon" id="stego-anim-prev-btn" title="Previous Step" aria-label="Previous Step" disabled><i data-lucide="arrow-left"></i></button>
+                                    <button class="btn btn-secondary btn-icon" id="stego-anim-next-btn" title="Next Step" aria-label="Next Step"><i data-lucide="arrow-right"></i></button>
+                                </div>
+                            </div>
+                            <div class="anim-description" id="stego-anim-step-description">Description...</div>
+                            <div class="stego-anim-stage" id="stego-anim-stage">
+                                <!-- Dynamic content goes here -->
+                            </div>
+                            <div class="stego-final-actions" id="stego-final-actions" style="display: none;">
+                                <button class="btn btn-success" id="stego-download-btn">
+                                    <i data-lucide="download"></i><span>Download Encoded File</span>
+                                </button>
+                                <button class="btn btn-secondary" id="stego-new-op-btn">
+                                    <i data-lucide="rotate-ccw"></i><span>Start New Operation</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div class="stego-file-input-area">
-                        <input type="file" id="stego-file-input" accept="image/*" hidden>
-                        <label for="stego-file-input" class="attack-file-label stego-file-label">
-                            <i data-lucide="upload-cloud" id="stego-file-icon"></i>
-                            <span id="stego-file-name">Click to select file...</span>
-                        </label>
-                        <div id="stego-file-preview"></div> 
-                    </div>
-                    <div class="input-group" id="stego-secret-message-group">
-                        <label for="stego-secret-message">Secret Message to Hide</label>
-                        <textarea id="stego-secret-message" rows="4" placeholder="Enter the text you want to conceal..."></textarea>
-                    </div>
-                    <div class="stego-actions">
-                        <button class="btn btn-primary" id="stego-encode-btn" aria-label="Encode and Download">
-                            <i data-lucide="lock"></i><span>Encode & Download</span><div class="loader"></div>
-                        </button>
-                        <button class="btn btn-secondary" id="stego-decode-btn" style="display: none;" aria-label="Decode Message">
-                            <i data-lucide="unlock"></i><span>Decode Message</span><div class="loader"></div>
-                        </button>
-                    </div>
-                    <div class="stego-results" id="stego-results-area" style="display: none;">
-                        <h4>Decoded Message:</h4>
-                        <pre id="stego-decoded-message">...</pre>
-                    </div>
-                    <div class="stego-status" id="stego-status-message" style="display: none;"></div>
-                </div> 
+                </div>
             </div> 
         </div> 
     </div>
