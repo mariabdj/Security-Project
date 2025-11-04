@@ -1,6 +1,6 @@
 /* ---
    SSAD Attack Simulation Logic
-   [MODIFIED FOR REAL MITM IMPLEMENTATION]
+   [MODIFIED TO SIMULATE CAPTCHA BLOCK on BF/Dictionary]
    --- */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -297,10 +297,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- 4. Attack Submission (BF/Dict) ---
+    // --- [MODIFIED] 4. Attack Submission (BF/Dict) ---
     
-    // This function is for BF/Dict and is unchanged
-    async function runAttackSimulation(button, title, endpoint, payload) {
+    /**
+     * [MODIFIED] This function NO LONGER calls the backend.
+     * It simulates an attack animation and then shows a hard-coded "Failed" result
+     * to demonstrate that CAPTCHA blocked the attack.
+     */
+    async function simulateBlockedAttack(button, title) {
         setupContainer.style.display = 'none'; 
         simulationContainer.style.display = 'flex'; 
         simulationContainer.classList.add('visible'); 
@@ -309,62 +313,52 @@ document.addEventListener('DOMContentLoaded', () => {
         animProgress.style.width = '0%'; 
         animProgress.style.transition = 'none'; 
         
+        // Run a fake progress bar for 2 seconds to simulate the "attack"
         requestAnimationFrame(() => {
             requestAnimationFrame(() => { 
-                 animProgress.style.transition = `width 3000ms cubic-bezier(0.25, 1, 0.5, 1)`;
-                 animProgress.style.width = '75%';
+                 animProgress.style.transition = `width 2000ms cubic-bezier(0.25, 1, 0.5, 1)`;
+                 animProgress.style.width = '100%'; // Show it "try" and "fail"
             });
         });
 
-        try {
-            let response;
-            if (payload instanceof FormData) {
-                response = await secureFetch(endpoint, { method: 'POST', body: payload, headers: { 'Content-Type': undefined } });
-            } else {
-                response = await secureFetch(endpoint, { method: 'POST', body: JSON.stringify(payload) });
-            }
+        // Wait for the animation
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.detail || 'Attack failed');
-            
-            animProgress.style.transition = 'width 0.5s ease-out';
-            animProgress.style.width = '100%';
-            
-            setTimeout(() => {
-                displayAttackResults(data);
-            }, 500);
-
-        } catch (error) {
-            showNotification(error.message, 'error');
-            resetAttackUI();
-        } finally {
-            setButtonLoading(button, false);
-        }
+        // As requested: create a FAKE result object
+        const fakeResult = {
+            found: false,
+            message: "Attack Failed: CAPTCHA protection is active and blocked the automated script.",
+            attempts: 0,
+            time_taken: 0.0
+        };
+        
+        // Display the fake result
+        displayAttackResults(fakeResult);
+        
+        // Re-enable the button
+        setButtonLoading(button, false);
     }
 
     if(bfForm) {
         bfForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const payload = {
-                target_username: bfTarget.username,
-                charset_type: bfPasswordType.value
-            };
-            runAttackSimulation(bfStartBtn, 'Brute Force Attack', '/passwords-and-attacks/attack/bruteforce', payload);
+            setButtonLoading(bfStartBtn, true);
+            // Call the MODIFIED simulation function
+            simulateBlockedAttack(bfStartBtn, 'Brute Force Attack');
         });
     }
 
     if(dictForm) {
         dictForm.addEventListener('submit', (e) => {
             e.preventDefault();
-            const formData = new FormData();
-            formData.append('target_username', dictTarget.username);
-            formData.append('dictionary_file', dictionaryFile);
-            runAttackSimulation(dictStartBtn, 'Dictionary Attack', '/passwords-and-attacks/attack/dictionary', formData);
+            setButtonLoading(dictStartBtn, true);
+            // Call the MODIFIED simulation function
+            simulateBlockedAttack(dictStartBtn, 'Dictionary Attack');
         });
     }
     
     // --- 5. Results Display Logic (BF/Dict) ---
-
+    // This function is unchanged and works perfectly with the fake result.
     function displayAttackResults(result) {
         if(!simulationContainer || !resultsContainer) return;
         
@@ -391,10 +385,14 @@ document.addEventListener('DOMContentLoaded', () => {
         attackResetBtn.style.transform = 'translateY(20px)';
         
         const iconEl = document.createElement('i'); 
+        
+        // Use the fake 0.0 time
         const timeInMs = (result.time_taken * 1000).toFixed(2);
+        // Use the fake 0 attempts
         const attemptsStr = result.attempts.toLocaleString();
         
         if (result.found) {
+            // This part will no longer be reached by BF/Dict, but we keep it
             resultHeader.className = 'attack-result-header success';
             resultTitle.innerHTML = 'Success: Password Found!';
             iconEl.setAttribute('data-lucide', 'shield-check');
@@ -404,21 +402,25 @@ document.addEventListener('DOMContentLoaded', () => {
             resultPasswordCode.textContent = result.password; 
             resultMessageBox.style.display = 'none'; 
         } else {
+            // This part WILL be reached
             resultHeader.className = 'attack-result-header fail';
-            resultTitle.innerHTML = 'Attack Failed';
+            resultTitle.innerHTML = 'Attack Failed'; // Title
             iconEl.setAttribute('data-lucide', 'shield-off');
             resultHeader.prepend(iconEl);
 
             resultPasswordBox.style.display = 'none'; 
             resultMessageBox.style.display = 'block'; 
+            // Display the custom CAPTCHA message
             resultMessage.innerHTML = result.message || 'Password not found.';
         }
 
+        // Display the 0 attempts and 0.00 ms time
         resultAttempts.textContent = attemptsStr;
         resultTime.textContent = `${timeInMs} ms`;
         
         if (typeof lucide !== 'undefined') lucide.createIcons(); 
 
+        // Animate the results
         if (typeof anime !== 'undefined') {
             const tl = anime.timeline({ easing: 'easeOutExpo', duration: 800 });
             tl.add({ targets: resultHeader.querySelector('svg'), scale: [0, 1], rotate: '1turn', duration: 600 })
@@ -439,7 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- [NEW] 6. MiTM Attack Logic ---
+    // --- 6. MiTM Attack Logic (Unchanged from previous version) ---
 
     function resetMitmUI() {
         if(isMitmAttacking) {
@@ -509,7 +511,6 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await secureFetch('/mitm/packets');
             if (!response.ok) {
-                // Don't show error on a silent poll
                 console.error('MiTM poll failed');
                 return;
             }
@@ -517,10 +518,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const newPackets = await response.json();
             
             if (newPackets.length > 0) {
-                // --- PACKETS FOUND ---
-                if (mitmPollInterval) clearInterval(mitmPollInterval); // Stop polling
+                if (mitmPollInterval) clearInterval(mitmPollInterval); 
                 
-                interceptedPackets.unshift(...newPackets); // Add new packets to the top
+                interceptedPackets.unshift(...newPackets); 
                 
                 mitmActiveContainer.style.display = 'none';
                 mitmResultsContainer.style.display = 'flex';
@@ -528,13 +528,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 mitmResultsTitle.textContent = `Intercepted ${newPackets.length} new packet(s)!`;
                 renderMitmPackets();
             } else {
-                // No packets found, continue polling
                 mitmStatusText.textContent = `Listening... (Last check: ${new Date().toLocaleTimeString()})`;
             }
 
         } catch (error) {
             console.error('MiTM poll error:', error);
-            // Stop polling on error to prevent spam
             stopMitmAttack(true);
             showNotification('MiTM attack stopped due to an error.', 'error');
         }
@@ -570,7 +568,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'chat_request':
                     icon = 'mail-plus';
                     title = 'Chat Request';
-                    dataContent = JSON.stringify(packet.data, null, 2); // Already formatted with hashed params
+                    dataContent = JSON.stringify(packet.data, null, 2);
                     break;
                 case 'chat_message':
                     icon = 'message-square';
@@ -595,20 +593,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function continueMitmAttack() {
-        // Go back to listening screen
         mitmResultsContainer.style.display = 'none';
         mitmActiveContainer.style.display = 'flex';
         mitmStatusText.textContent = 'Listening for packets...';
         
-        // Start polling again
         if(mitmPollInterval) clearInterval(mitmPollInterval);
         mitmPollInterval = setInterval(pollMitmPackets, 2000);
     }
     
-    // Add MiTM event listeners
     if(mitmStartBtn) mitmStartBtn.addEventListener('click', startMitmAttack);
     if(mitmStopBtn) mitmStopBtn.addEventListener('click', () => stopMitmAttack(true));
     if(mitmContinueBtn) mitmContinueBtn.addEventListener('click', continueMitmAttack);
     if(mitmStopResultsBtn) mitmStopResultsBtn.addEventListener('click', () => stopMitmAttack(true));
 
 });
+
