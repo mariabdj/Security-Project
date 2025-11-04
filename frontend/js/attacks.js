@@ -1,6 +1,6 @@
 /* ---
    SSAD Attack Simulation Logic
-   [MODIFIED TO SIMULATE CAPTCHA BLOCK]
+   [MODIFIED FOR REAL MITM IMPLEMENTATION]
    --- */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -36,14 +36,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const dictFileName = document.getElementById('dict-file-name');
     const dictFilePrompt = document.getElementById('dict-file-prompt');
     const dictFileIcon = dictFileDropzone.querySelector('.dropzone-icon');
-    
     const dictStartBtn = document.getElementById('dict-start-btn');
     
-    // --- Éléments de l'étape d'animation ---
+    // --- Animation Stage (BF/Dict) ---
     const animTitle = document.getElementById('attack-anim-title');
     const animProgress = document.getElementById('attack-anim-progress');
     
-    // --- Éléments de l'étape de résultats ---
+    // --- Results Stage (BF/Dict) ---
     const resultHeader = document.getElementById('attack-result-header');
     const resultTitle = document.getElementById('attack-result-title');
     const resultPasswordBox = document.getElementById('attack-result-password-box'); 
@@ -54,11 +53,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultAttempts = document.getElementById('attack-result-attempts');
     const resultTime = document.getElementById('attack-result-time');
 
+    // --- [NEW] MiTM Elements ---
+    const mitmSetupContainer = document.getElementById('mitm-container-setup');
+    const mitmActiveContainer = document.getElementById('mitm-container-active');
+    const mitmResultsContainer = document.getElementById('mitm-container-results');
+    
+    const mitmStartBtn = document.getElementById('mitm-start-btn');
+    const mitmStopBtn = document.getElementById('mitm-stop-btn');
+    const mitmStatusText = document.getElementById('mitm-status-text');
+    
+    const mitmResultsTitle = document.getElementById('mitm-results-title');
+    const mitmPacketList = document.getElementById('mitm-packet-list');
+    const mitmContinueBtn = document.getElementById('mitm-continue-btn');
+    const mitmStopResultsBtn = document.getElementById('mitm-stop-results-btn');
+    
     // --- State Variables ---
     let bfTarget = { id: null, username: null };
     let dictTarget = { id: null, username: null };
     let dictionaryFile = null;
     let searchDebounceTimer = null;
+    
+    // --- [NEW] MiTM State ---
+    let isMitmAttacking = false;
+    let mitmPollInterval = null;
+    let interceptedPackets = [];
     
     // --- 1. General Logic (Tabs, Forms, Reset) ---
 
@@ -70,11 +88,24 @@ document.addEventListener('DOMContentLoaded', () => {
             tab.classList.add('active');
             tabPanels.forEach(p => p.classList.remove('active'));
             targetPanel.classList.add('active');
-            resetAttackUI(); 
+            
+            // Stop MiTM polling if we switch away
+            if (tab.dataset.tab !== 'mitm' && isMitmAttacking) {
+                stopMitmAttack(false); // Stop silently
+            }
+            // Reset other attack UIs
+            if(tab.dataset.tab !== 'bruteforce' && tab.dataset.tab !== 'dictionary') {
+                resetAttackUI();
+            }
+            // Reset MiTM UI if we switch to it
+            if(tab.dataset.tab === 'mitm') {
+                resetMitmUI();
+            }
         });
     });
 
     function resetAttackUI() {
+        // This function now only resets BF and Dictionary
         setupContainer.style.display = 'block';
         simulationContainer.style.display = 'none';
         simulationContainer.classList.remove('visible');
@@ -85,43 +116,49 @@ document.addEventListener('DOMContentLoaded', () => {
         dictTarget = { id: null, username: null };
         dictionaryFile = null;
 
-        bfForm.reset();
-        dictForm.reset();
+        if (bfForm) bfForm.reset();
+        if (dictForm) dictForm.reset();
         
-        bfSearchInput.value = '';
-        bfSearchInput.readOnly = false;
-        bfSearchClearBtn.style.display = 'none';
-        bfSearchResults.innerHTML = '';
-        bfSearchResults.classList.add('hidden'); 
+        if(bfSearchInput) {
+            bfSearchInput.value = '';
+            bfSearchInput.readOnly = false;
+            bfSearchClearBtn.style.display = 'none';
+            bfSearchResults.innerHTML = '';
+            bfSearchResults.classList.add('hidden');
+            bfStartBtn.disabled = true;
+        }
         
-        dictSearchInput.value = '';
-        dictSearchInput.readOnly = false;
-        dictSearchClearBtn.style.display = 'none';
-        dictSearchResults.innerHTML = '';
-        dictSearchResults.classList.add('hidden'); 
+        if(dictSearchInput) {
+            dictSearchInput.value = '';
+            dictSearchInput.readOnly = false;
+            dictSearchClearBtn.style.display = 'none';
+            dictSearchResults.innerHTML = '';
+            dictSearchResults.classList.add('hidden');
+            
+            dictFileInput.value = ''; 
+            dictFileName.textContent = 'Click to upload or drag & drop';
+            dictFilePrompt.textContent = 'Supports: .txt files';
+            dictFileDropzone.classList.remove('file-selected');
+            dictFileIcon.innerHTML = '<i data-lucide="file-up"></i>';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            
+            dictStartBtn.disabled = true;
+        }
         
-        dictFileInput.value = ''; 
-        dictFileName.textContent = 'Click to upload or drag & drop';
-        dictFilePrompt.textContent = 'Supports: .txt files';
-        dictFileDropzone.classList.remove('file-selected');
-        dictFileIcon.innerHTML = '<i data-lucide="file-up"></i>';
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        if(animProgress) {
+            animProgress.style.transition = 'none'; 
+            animProgress.style.width = '0%';
+        }
         
-        bfStartBtn.disabled = true;
-        dictStartBtn.disabled = true;
-
-        animProgress.style.transition = 'none'; 
-        animProgress.style.width = '0%';
-        
-        const existingIcon = resultHeader.querySelector('svg');
+        const existingIcon = resultHeader ? resultHeader.querySelector('svg') : null;
         if (existingIcon) {
             existingIcon.remove();
         }
     }
 
-    attackResetBtn.addEventListener('click', resetAttackUI);
+    if(attackResetBtn) attackResetBtn.addEventListener('click', resetAttackUI);
 
-    // --- 2. User Search Logic (Unchanged) ---
+    // --- 2. User Search Logic (BF/Dict) ---
 
     function handleAttackUserSearch(e, resultsContainer, clearBtn, onSelectCallback) {
         clearTimeout(searchDebounceTimer);
@@ -178,6 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function setupClearButton(clearBtn, input, resultsContainer, onClearCallback) {
+        if(!clearBtn) return;
         clearBtn.addEventListener('click', () => {
             input.value = '';
             input.readOnly = false;
@@ -188,25 +226,29 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    bfSearchInput.addEventListener('input', (e) => handleAttackUserSearch(e, bfSearchResults, bfSearchClearBtn, (id, username) => {
-        bfTarget = { id, username };
-        bfStartBtn.disabled = !bfTarget.id;
-    }));
-    setupClearButton(bfSearchClearBtn, bfSearchInput, bfSearchResults, () => {
-        bfTarget = { id: null, username: null };
-        bfStartBtn.disabled = true;
-    });
+    if(bfSearchInput) {
+        bfSearchInput.addEventListener('input', (e) => handleAttackUserSearch(e, bfSearchResults, bfSearchClearBtn, (id, username) => {
+            bfTarget = { id, username };
+            bfStartBtn.disabled = !bfTarget.id;
+        }));
+        setupClearButton(bfSearchClearBtn, bfSearchInput, bfSearchResults, () => {
+            bfTarget = { id: null, username: null };
+            bfStartBtn.disabled = true;
+        });
+    }
 
-    dictSearchInput.addEventListener('input', (e) => handleAttackUserSearch(e, dictSearchResults, dictSearchClearBtn, (id, username) => {
-        dictTarget = { id, username };
-        dictStartBtn.disabled = !dictTarget.id || !dictionaryFile;
-    }));
-    setupClearButton(dictSearchClearBtn, dictSearchInput, dictSearchResults, () => {
-        dictTarget = { id: null, username: null };
-        dictStartBtn.disabled = true;
-    });
-
-    // --- 3. File Dropzone Logic (Unchanged) ---
+    if(dictSearchInput) {
+        dictSearchInput.addEventListener('input', (e) => handleAttackUserSearch(e, dictSearchResults, dictSearchClearBtn, (id, username) => {
+            dictTarget = { id, username };
+            dictStartBtn.disabled = !dictTarget.id || !dictionaryFile;
+        }));
+        setupClearButton(dictSearchClearBtn, dictSearchInput, dictSearchResults, () => {
+            dictTarget = { id: null, username: null };
+            dictStartBtn.disabled = true;
+        });
+    }
+    
+    // --- 3. File Dropzone Logic (BF/Dict) ---
 
     function handleFileSelect(file) {
         if (!file) {
@@ -217,8 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (file.type !== 'text/plain') {
             showNotification('Invalid file type. Please upload a .txt file.', 'error');
-            dictFileDropzone.classList.remove('file-selected');
-            dictFileDropzone.classList.remove('dragover');
+            dictFileDropzone.classList.remove('file-selected', 'dragover');
             return;
         }
 
@@ -231,96 +272,109 @@ document.addEventListener('DOMContentLoaded', () => {
         dictStartBtn.disabled = !dictTarget.id || !dictionaryFile;
     }
 
-    dictFileInput.addEventListener('change', () => {
-        if (dictFileInput.files.length > 0) {
-            handleFileSelect(dictFileInput.files[0]);
-        }
-    });
+    if(dictFileInput) {
+        dictFileInput.addEventListener('change', () => {
+            if (dictFileInput.files.length > 0) {
+                handleFileSelect(dictFileInput.files[0]);
+            }
+        });
 
-    dictFileDropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dictFileDropzone.classList.add('dragover');
-    });
-    dictFileDropzone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        dictFileDropzone.classList.remove('dragover');
-    });
-    dictFileDropzone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dictFileDropzone.classList.remove('dragover');
-        if (e.dataTransfer.files.length > 0) {
-            dictFileInput.files = e.dataTransfer.files; 
-            handleFileSelect(e.dataTransfer.files[0]);
-        }
-    });
+        dictFileDropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dictFileDropzone.classList.add('dragover');
+        });
+        dictFileDropzone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            dictFileDropzone.classList.remove('dragover');
+        });
+        dictFileDropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dictFileDropzone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                dictFileInput.files = e.dataTransfer.files; 
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+    }
 
-
-    // --- 4. Attack Submission [MODIFIED] ---
-
-    // [NEW] This function replaces all backend calls
-    async function simulateBlockedAttack(title) {
-        // 1. Show simulation screen
+    // --- 4. Attack Submission (BF/Dict) ---
+    
+    // This function is for BF/Dict and is unchanged
+    async function runAttackSimulation(button, title, endpoint, payload) {
         setupContainer.style.display = 'none'; 
         simulationContainer.style.display = 'flex'; 
         simulationContainer.classList.add('visible'); 
-        animTitle.textContent = `Simulating ${title}...`;
-
-        // 2. Run fake progress bar
+        animTitle.textContent = `Running ${title}...`;
+        
         animProgress.style.width = '0%'; 
         animProgress.style.transition = 'none'; 
+        
         requestAnimationFrame(() => {
             requestAnimationFrame(() => { 
-                 animProgress.style.transition = `width 2000ms cubic-bezier(0.25, 1, 0.5, 1)`;
-                 animProgress.style.width = '100%';
+                 animProgress.style.transition = `width 3000ms cubic-bezier(0.25, 1, 0.5, 1)`;
+                 animProgress.style.width = '75%';
             });
         });
 
-        // 3. Wait for animation to finish
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            let response;
+            if (payload instanceof FormData) {
+                response = await secureFetch(endpoint, { method: 'POST', body: payload, headers: { 'Content-Type': undefined } });
+            } else {
+                response = await secureFetch(endpoint, { method: 'POST', body: JSON.stringify(payload) });
+            }
 
-        // 4. Create static "failed" result
-        const result = {
-            found: false,
-            message: "Attack Failed: CAPTCHA protection is active and cannot be bypassed by this script.",
-            attempts: 0,
-            time_taken: 0.0
-        };
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || 'Attack failed');
+            
+            animProgress.style.transition = 'width 0.5s ease-out';
+            animProgress.style.width = '100%';
+            
+            setTimeout(() => {
+                displayAttackResults(data);
+            }, 500);
 
-        // 5. Display the static result
-        displayAttackResults(result);
+        } catch (error) {
+            showNotification(error.message, 'error');
+            resetAttackUI();
+        } finally {
+            setButtonLoading(button, false);
+        }
     }
 
-    bfForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const type = bfPasswordType.value;
-        const target = bfTarget.username;
-        if (!target) return;
-        
-        simulateBlockedAttack(`Brute Force (${type}) on "${target}"`);
-    });
-    
-    dictForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const target = dictTarget.username;
-        if (!target || !dictionaryFile) return;
+    if(bfForm) {
+        bfForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const payload = {
+                target_username: bfTarget.username,
+                charset_type: bfPasswordType.value
+            };
+            runAttackSimulation(bfStartBtn, 'Brute Force Attack', '/passwords-and-attacks/attack/bruteforce', payload);
+        });
+    }
 
-        simulateBlockedAttack(`Dictionary Attack on "${target}"`);
-    });
+    if(dictForm) {
+        dictForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('target_username', dictTarget.username);
+            formData.append('dictionary_file', dictionaryFile);
+            runAttackSimulation(dictStartBtn, 'Dictionary Attack', '/passwords-and-attacks/attack/dictionary', formData);
+        });
+    }
     
-    // --- 5. Results Display Logic (Unchanged from previous step) ---
-    // This function will now be called by simulateBlockedAttack()
+    // --- 5. Results Display Logic (BF/Dict) ---
 
     function displayAttackResults(result) {
+        if(!simulationContainer || !resultsContainer) return;
+        
         simulationContainer.style.display = 'none'; 
         resultsContainer.classList.add('visible'); 
         resultsContainer.style.display = 'flex'; 
 
         const existingIcon = resultHeader.querySelector('svg');
-        if (existingIcon) {
-            existingIcon.remove();
-        }
+        if (existingIcon) existingIcon.remove();
         
-        // Reset animations
         resultTitle.style.opacity = 0;
         resultPasswordBox.style.display = 'none';
         resultMessageBox.style.display = 'none';
@@ -333,13 +387,10 @@ document.addEventListener('DOMContentLoaded', () => {
         resultStatsBox.querySelectorAll('.attack-stat-card').forEach(card => {
             card.style.transform = 'rotateY(-90deg)';
         });
-
         attackResetBtn.style.opacity = 0;
         attackResetBtn.style.transform = 'translateY(20px)';
         
         const iconEl = document.createElement('i'); 
-
-        // Convert time to milliseconds
         const timeInMs = (result.time_taken * 1000).toFixed(2);
         const attemptsStr = result.attempts.toLocaleString();
         
@@ -351,63 +402,30 @@ document.addEventListener('DOMContentLoaded', () => {
             
             resultPasswordBox.style.display = 'flex'; 
             resultPasswordCode.textContent = result.password; 
-
-            resultMessageBox.style.display = 'block'; 
-            resultMessage.innerHTML = `<b>Attempts:</b> ${attemptsStr}<br><b>Time:</b> ${timeInMs} ms`;
-
+            resultMessageBox.style.display = 'none'; 
         } else {
             resultHeader.className = 'attack-result-header fail';
-            resultTitle.innerHTML = 'Attack Failed'; // Title is simple "Attack Failed"
+            resultTitle.innerHTML = 'Attack Failed';
             iconEl.setAttribute('data-lucide', 'shield-off');
             resultHeader.prepend(iconEl);
 
             resultPasswordBox.style.display = 'none'; 
             resultMessageBox.style.display = 'block'; 
-            // The main message is now the custom one
-            resultMessage.innerHTML = `${result.message}<br><b>Attempts:</b> ${attemptsStr}<br><b>Time:</b> ${timeInMs} ms`;
+            resultMessage.innerHTML = result.message || 'Password not found.';
         }
 
-        // Update the stat cards
         resultAttempts.textContent = attemptsStr;
         resultTime.textContent = `${timeInMs} ms`;
         
         if (typeof lucide !== 'undefined') lucide.createIcons(); 
 
-        // Animate results
         if (typeof anime !== 'undefined') {
-            const tl = anime.timeline({
-                easing: 'easeOutExpo',
-                duration: 800
-            });
-
-            tl.add({
-                targets: resultHeader.querySelector('svg'), 
-                scale: [0, 1],
-                rotate: '1turn',
-                duration: 600
-            })
-            .add({
-                targets: resultTitle,
-                opacity: [0, 1],
-            }, '-=400')
-            .add({
-                targets: resultStatsBox.querySelectorAll('.attack-stat-card'),
-                transform: 'rotateY(0deg)',
-                delay: anime.stagger(200),
-                duration: 600
-            }, '-=500')
-            .add({
-                targets: [resultPasswordBox, resultMessageBox], 
-                opacity: [0, 1],
-                translateY: 0,
-                duration: 500
-            }, '-=300')
-             .add({
-                targets: attackResetBtn,
-                opacity: [0, 1],
-                translateY: 0,
-                duration: 500
-            }, '-=200');
+            const tl = anime.timeline({ easing: 'easeOutExpo', duration: 800 });
+            tl.add({ targets: resultHeader.querySelector('svg'), scale: [0, 1], rotate: '1turn', duration: 600 })
+            .add({ targets: resultTitle, opacity: [0, 1], }, '-=400')
+            .add({ targets: resultStatsBox.querySelectorAll('.attack-stat-card'), transform: 'rotateY(0deg)', delay: anime.stagger(200), duration: 600 }, '-=500')
+            .add({ targets: [resultPasswordBox, resultMessageBox], opacity: [0, 1], translateY: 0, duration: 500 }, '-=300')
+            .add({ targets: attackResetBtn, opacity: [0, 1], translateY: 0, duration: 500 }, '-=200');
         } else {
              // Fallback
              resultTitle.style.opacity = 1;
@@ -415,12 +433,182 @@ document.addEventListener('DOMContentLoaded', () => {
              resultMessageBox.style.opacity = 1;
              resultPasswordBox.style.transform = 'translateY(0)';
              resultMessageBox.style.transform = 'translateY(0)';
-             resultStatsBox.querySelectorAll('.attack-stat-card').forEach(card => {
-                card.style.transform = 'rotateY(0deg)';
-             });
+             resultStatsBox.querySelectorAll('.attack-stat-card').forEach(card => card.style.transform = 'rotateY(0deg)');
              attackResetBtn.style.opacity = 1;
              attackResetBtn.style.transform = 'translateY(0)';
         }
     }
-});
 
+    // --- [NEW] 6. MiTM Attack Logic ---
+
+    function resetMitmUI() {
+        if(isMitmAttacking) {
+            stopMitmAttack(false); // Stop silently
+        }
+        interceptedPackets = [];
+        mitmSetupContainer.style.display = 'flex';
+        mitmActiveContainer.style.display = 'none';
+        mitmResultsContainer.style.display = 'none';
+        mitmPacketList.innerHTML = '';
+        setButtonLoading(mitmStartBtn, false);
+    }
+
+    async function startMitmAttack() {
+        setButtonLoading(mitmStartBtn, true);
+        try {
+            const response = await secureFetch('/mitm/start', {
+                method: 'POST',
+                body: JSON.stringify({ attacker_username: CURRENT_USERNAME })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || 'Failed to start listener');
+
+            isMitmAttacking = true;
+            mitmSetupContainer.style.display = 'none';
+            mitmResultsContainer.style.display = 'none';
+            mitmActiveContainer.style.display = 'flex';
+            mitmStatusText.textContent = 'Listening for packets...';
+            
+            // Start polling
+            if(mitmPollInterval) clearInterval(mitmPollInterval);
+            mitmPollInterval = setInterval(pollMitmPackets, 2000);
+
+        } catch (error) {
+            showNotification(error.message, 'error');
+        } finally {
+            setButtonLoading(mitmStartBtn, false);
+        }
+    }
+
+    async function stopMitmAttack(showAlert = true) {
+        if (mitmPollInterval) clearInterval(mitmPollInterval);
+        mitmPollInterval = null;
+        isMitmAttacking = false;
+        
+        // Reset UI to initial setup state
+        mitmSetupContainer.style.display = 'flex';
+        mitmActiveContainer.style.display = 'none';
+        mitmResultsContainer.style.display = 'none';
+        interceptedPackets = [];
+        mitmPacketList.innerHTML = '';
+
+        try {
+            await secureFetch('/mitm/stop', {
+                method: 'POST',
+                body: JSON.stringify({ attacker_username: CURRENT_USERNAME })
+            });
+            if(showAlert) showNotification('MiTM attack stopped.', 'success');
+        } catch (error) {
+            if(showAlert) showNotification('Failed to stop listener, but polling has ended.', 'error');
+        }
+    }
+
+    async function pollMitmPackets() {
+        if (!isMitmAttacking) return;
+        
+        try {
+            const response = await secureFetch('/mitm/packets');
+            if (!response.ok) {
+                // Don't show error on a silent poll
+                console.error('MiTM poll failed');
+                return;
+            }
+            
+            const newPackets = await response.json();
+            
+            if (newPackets.length > 0) {
+                // --- PACKETS FOUND ---
+                if (mitmPollInterval) clearInterval(mitmPollInterval); // Stop polling
+                
+                interceptedPackets.unshift(...newPackets); // Add new packets to the top
+                
+                mitmActiveContainer.style.display = 'none';
+                mitmResultsContainer.style.display = 'flex';
+                
+                mitmResultsTitle.textContent = `Intercepted ${newPackets.length} new packet(s)!`;
+                renderMitmPackets();
+            } else {
+                // No packets found, continue polling
+                mitmStatusText.textContent = `Listening... (Last check: ${new Date().toLocaleTimeString()})`;
+            }
+
+        } catch (error) {
+            console.error('MiTM poll error:', error);
+            // Stop polling on error to prevent spam
+            stopMitmAttack(true);
+            showNotification('MiTM attack stopped due to an error.', 'error');
+        }
+    }
+    
+    function renderMitmPackets() {
+        mitmPacketList.innerHTML = '';
+        if (interceptedPackets.length === 0) {
+            mitmPacketList.innerHTML = '<div class="chat-list-placeholder"><i data-lucide="ghost"></i><p>No packets intercepted yet.</p></div>';
+            lucide.createIcons();
+            return;
+        }
+
+        interceptedPackets.forEach(packet => {
+            const packetEl = document.createElement('div');
+            packetEl.className = 'mitm-packet';
+            
+            let icon = 'help-circle';
+            let title = 'Unknown Packet';
+            let dataContent = JSON.stringify(packet.data, null, 2);
+
+            switch (packet.packet_type) {
+                case 'login':
+                    icon = 'log-in';
+                    title = 'Login Attempt';
+                    dataContent = `{\n  "username": "${packet.data.username}",\n  "password_hash_capture": "${packet.data.password_hash_capture}"\n}`;
+                    break;
+                case 'signup':
+                    icon = 'user-plus';
+                    title = 'Signup Attempt';
+                    dataContent = `{\n  "username": "${packet.data.username}",\n  "password_hash_capture": "${packet.data.password_hash_capture}" \n}`;
+                    break;
+                case 'chat_request':
+                    icon = 'mail-plus';
+                    title = 'Chat Request';
+                    dataContent = JSON.stringify(packet.data, null, 2); // Already formatted with hashed params
+                    break;
+                case 'chat_message':
+                    icon = 'message-square';
+                    title = 'Chat Message';
+                    dataContent = `{\n  "chat_id": "${packet.data.chat_id}",\n  "sender_id": "${packet.data.sender_id}",\n  "content_type": "${packet.data.content_type}",\n  "encrypted_content": "${packet.data.encrypted_content}"\n}`;
+                    break;
+            }
+
+            const timestamp = new Date(packet.created_at).toLocaleString();
+            
+            packetEl.innerHTML = `
+                <div class="mitm-packet-header">
+                    <h4><i data-lucide="${icon}"></i> ${title}</h4>
+                    <span class="timestamp">${timestamp}</span>
+                </div>
+                <pre>${dataContent}</pre>
+            `;
+            mitmPacketList.appendChild(packetEl);
+        });
+        
+        lucide.createIcons();
+    }
+    
+    function continueMitmAttack() {
+        // Go back to listening screen
+        mitmResultsContainer.style.display = 'none';
+        mitmActiveContainer.style.display = 'flex';
+        mitmStatusText.textContent = 'Listening for packets...';
+        
+        // Start polling again
+        if(mitmPollInterval) clearInterval(mitmPollInterval);
+        mitmPollInterval = setInterval(pollMitmPackets, 2000);
+    }
+    
+    // Add MiTM event listeners
+    if(mitmStartBtn) mitmStartBtn.addEventListener('click', startMitmAttack);
+    if(mitmStopBtn) mitmStopBtn.addEventListener('click', () => stopMitmAttack(true));
+    if(mitmContinueBtn) mitmContinueBtn.addEventListener('click', continueMitmAttack);
+    if(mitmStopResultsBtn) mitmStopResultsBtn.addEventListener('click', () => stopMitmAttack(true));
+
+});

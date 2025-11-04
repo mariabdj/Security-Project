@@ -7,6 +7,10 @@ import os
 import httpx
 from datetime import datetime, timedelta, timezone
 
+# --- [NEW] MiTM Imports ---
+from ..security.mitm_tools import get_listeners, capture_packet, hash_data
+# --- End MiTM Imports ---
+
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"]
@@ -18,7 +22,6 @@ CAPTCHA_VERIFY_URL = "https://www.google.com/recaptcha/api/siteverify"
 async def verify_captcha(token: str) -> bool:
     """Helper function to verify a reCAPTCHA token."""
     if not RECAPTCHA_SECRET_KEY:
-        # If no key is set, log a warning but allow login (for development)
         print("Warning: RECAPTCHA_SECRET_KEY is not set. Skipping CAPTCHA verification.")
         return True 
         
@@ -28,7 +31,7 @@ async def verify_captcha(token: str) -> bool:
                 CAPTCHA_VERIFY_URL,
                 data={"secret": RECAPTCHA_SECRET_KEY, "response": token}
             )
-            response.raise_for_status() # Raise exception for 4xx/5xx errors
+            response.raise_for_status()
             return response.json().get("success", False)
         except Exception as e:
             print(f"CAPTCHA verification HTTP request failed: {e}")
@@ -36,6 +39,20 @@ async def verify_captcha(token: str) -> bool:
 
 @router.post("/signup", response_model=schemas.User)
 async def signup(user: schemas.UserCreate):
+    
+    # --- [NEW] MiTM Capture for Signup ---
+    # We capture the *plaintext* password here as it's what's sent over the network
+    # But we hash it for the demo, as requested by the user.
+    try:
+        listeners = get_listeners()
+        if listeners:
+            hashed_pass_for_mitm = hash_data(user.password) # Hash plaintext for demo
+            mitm_data = {"username": user.username, "password_hash_capture": hashed_pass_for_mitm}
+            capture_packet(packet_type="signup", data=mitm_data, listeners=listeners)
+    except Exception as e:
+        print(f"MiTM Signup Capture Error: {e}") # Don't fail signup if MiTM fails
+    # --- End MiTM Capture ---
+
     # 1. Check if username already exists
     response = supabase.table("users").select("id").eq("username", user.username).execute()
     if response.data:
@@ -44,15 +61,15 @@ async def signup(user: schemas.UserCreate):
             detail="Username already registered",
         )
 
-    # 2. Hash the password
+    # 2. Hash the password (using the *fixed* security function)
     hashed_password = get_password_hash(user.password)
 
     # 3. Insert the new user into the public.users table
     new_user_data = {
         "username": user.username,
-        "password_hash": hashed_password,
-        "failed_login_attempts": 0, # <-- [MODIFIED] Initialize new field
-        "lockout_until": None      # <-- [MODIFIED] Initialize new field
+        "password_hash": hashed_password, # Store the secure hash
+        "failed_login_attempts": 0,
+        "lockout_until": None
     }
     
     try:
@@ -78,7 +95,19 @@ async def signup(user: schemas.UserCreate):
 @router.post("/login", response_model=schemas.Token)
 async def login(form_data: schemas.UserLogin):
     
-    # --- [MODIFIED] Part 1: CAPTCHA Verification ---
+    # --- [NEW] MiTM Capture for Login ---
+    # form_data.password is *already hashed* by the client (as per auth.js)
+    # This is perfect for the demo.
+    try:
+        listeners = get_listeners()
+        if listeners:
+            mitm_data = {"username": form_data.username, "password_hash_capture": form_data.password}
+            capture_packet(packet_type="login", data=mitm_data, listeners=listeners)
+    except Exception as e:
+        print(f"MiTM Login Capture Error: {e}") # Don't fail login if MiTM fails
+    # --- End MiTM Capture ---
+
+    # --- Part 1: CAPTCHA Verification ---
     if not form_data.captcha_token:
         raise HTTPException(status_code=400, detail="CAPTCHA token is required.")
         
@@ -86,7 +115,7 @@ async def login(form_data: schemas.UserLogin):
     if not is_captcha_valid:
         raise HTTPException(status_code=400, detail="CAPTCHA verification failed. Please try again.")
     
-    # --- [MODIFIED] Part 2: Rate Limiting and Login Logic ---
+    # --- Part 2: Rate Limiting and Login Logic ---
     
     # 1. Find the user
     try:
@@ -97,9 +126,8 @@ async def login(form_data: schemas.UserLogin):
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
     
     if not response.data:
-        # User not found, but we don't tell them.
         raise HTTPException(
-            status_code=401, # Use 401 for security
+            status_code=401,
             detail="Incorrect username or password"
         )
     
@@ -108,12 +136,10 @@ async def login(form_data: schemas.UserLogin):
 
     # 2. Check for existing lockout
     if user_data.get("lockout_until"):
-        # Supabase stores timestamps with timezone, so we parse it directly
         try:
             lockout_time = datetime.fromisoformat(user_data["lockout_until"])
         except ValueError:
-            # Handle potential null or invalid format, though it shouldn't happen
-            lockout_time = now - timedelta(seconds=1) # Treat as expired
+            lockout_time = now - timedelta(seconds=1)
 
         if lockout_time > now:
             wait_seconds = (lockout_time - now).total_seconds()
@@ -122,7 +148,9 @@ async def login(form_data: schemas.UserLogin):
                 detail=f"Too many failed attempts. Please wait {int(wait_seconds)} seconds."
             )
 
-    # 3. Verify the password
+    # 3. Verify the password (using the *fixed* security function)
+    # form_data.password is the hash from the client
+    # user_data["password_hash"] is the hash from the DB
     is_password_correct = verify_password(form_data.password, user_data["password_hash"])
     
     if not is_password_correct:
@@ -132,12 +160,11 @@ async def login(form_data: schemas.UserLogin):
         lockout_duration_seconds = 0
         
         if current_attempts == 1:
-            lockout_duration_seconds = 30 # 30 seconds
+            lockout_duration_seconds = 30
         elif current_attempts == 2:
-            lockout_duration_seconds = 60 # 1 minute
+            lockout_duration_seconds = 60
         else:
-            # 3rd attempt and all future attempts
-            lockout_duration_seconds = 300 # 5 minutes
+            lockout_duration_seconds = 300
             
         new_lockout_until = now + timedelta(seconds=lockout_duration_seconds)
         
@@ -147,9 +174,8 @@ async def login(form_data: schemas.UserLogin):
                 "lockout_until": new_lockout_until.isoformat()
             }).eq("id", user_data["id"]).execute()
         except Exception as e:
-            print(f"Failed to update lockout: {e}") # Log error but continue
+            print(f"Failed to update lockout: {e}")
 
-        # Return the lockout time to the user
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"Incorrect username or password. Please wait {lockout_duration_seconds} seconds."
@@ -157,14 +183,13 @@ async def login(form_data: schemas.UserLogin):
 
     # 4. Password is CORRECT: Reset attempts and create token
     try:
-        # Only update if they actually had failed attempts
         if user_data.get("failed_login_attempts", 0) > 0 or user_data.get("lockout_until") is not None:
             supabase.table("users").update({
                 "failed_login_attempts": 0,
                 "lockout_until": None
             }).eq("id", user_data["id"]).execute()
     except Exception as e:
-        print(f"Failed to reset lockout on success: {e}") # Log error but continue
+        print(f"Failed to reset lockout on success: {e}")
 
     token_data = {"id": str(user_data["id"]), "username": user_data["username"]}
     access_token = create_access_token(data=token_data)

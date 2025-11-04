@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .core.supabase_client import supabase
-from .api import auth, users, chats, attacks, storage, visualize, crypto
+from .api import auth, users, chats, attacks, storage, visualize, crypto, mitm  # <-- IMPORT MITM
 
 app = FastAPI(
     title="TP1-SSAD Security Framework API",
@@ -16,7 +16,7 @@ origins = [
     "http://127.0.0.1",
     "http://127.0.0.1:5500",
     "null",
-    "https://mariabdj.github.io",  # <-- ADD THIS LINE
+    "https://mariabdj.github.io",
 ]
 
 app.add_middleware(
@@ -35,6 +35,7 @@ app.include_router(attacks.router)
 app.include_router(storage.router)
 app.include_router(visualize.router)
 app.include_router(crypto.router)
+app.include_router(mitm.router)  # <-- INCLUDE MITM ROUTER
 
 @app.get("/")
 def read_root():

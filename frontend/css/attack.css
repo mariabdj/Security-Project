@@ -1,6 +1,6 @@
 /* ---
    SSAD Attack Simulation Stylesheet (attacks.css)
-   [ALL FIXES INCLUDED]
+   [MODIFIED TO INCLUDE MITM STYLES]
    --- */
 
 /* 1. Modal Body & Tab Layout */
@@ -18,7 +18,6 @@
 .attack-modal-body .viz-tab-panel.active {
     display: block;
 }
-/* This container holds the setup forms */
 .attack-setup-container {
     max-width: 600px;
     margin: 0 auto;
@@ -33,7 +32,6 @@
     margin: 0 auto;
 }
 .attack-form-section {
-     /* Le 'gap' gère l'espacement */
 }
 .attack-form-section label {
     display: block;
@@ -42,13 +40,11 @@
     margin-bottom: 1rem; 
     color: var(--text-secondary);
 }
-
-/* [FIX #1] Spacing above the "Start Attack" button */
 .attack-form .btn-primary {
     width: auto;
     align-self: flex-start;
     padding: 0.8rem 1.75rem; 
-    margin-top: 1.5rem; /* C'EST LE FIX */
+    margin-top: 1.5rem;
 }
 .attack-form .btn-primary:disabled {
     background-color: var(--accent-secondary);
@@ -80,7 +76,6 @@
     color: var(--text-primary);
     font-weight: 500;
 }
-
 .input-clear-btn {
     position: absolute;
     right: 0.5rem;
@@ -103,11 +98,7 @@
     background-color: var(--accent-secondary-hover);
     color: var(--text-primary);
 }
-.input-clear-btn i {
-    width: 16px;
-    height: 16px;
-}
-
+.input-clear-btn i { width: 16px; height: 16px; }
 .attack-search-results {
     max-height: 150px;
     overflow-y: auto;
@@ -120,16 +111,12 @@
     animation: fade-in-down 0.3s ease-out;
     margin-top: -1px; 
 }
-.attack-search-results.hidden {
-    display: none;
-}
+.attack-search-results.hidden { display: none; }
 @keyframes fade-in-down {
     from { opacity: 0; transform: scaleY(0.9); }
     to { opacity: 1; transform: scaleY(1); }
 }
-.attack-search-results .chat-list-item {
-    border-bottom: 1px solid var(--border-color);
-}
+.attack-search-results .chat-list-item { border-bottom: 1px solid var(--border-color); }
 .attack-search-results .chat-list-item:last-child { border-bottom: none; }
 .attack-search-results .chat-list-item .avatar { width: 36px; height: 36px; font-size: 1rem; }
 .attack-search-results .chat-list-item h3 { font-size: 0.95rem; }
@@ -137,8 +124,7 @@
 .attack-search-results .chat-list-item:hover { background-color: var(--accent-secondary); }
 .attack-search-results .chat-list-placeholder { padding: 1rem; text-align: center; font-size: 0.9rem; color: var(--text-secondary); }
 
-
-/* 4. [FIX #2] Nouveaux styles pour le sélecteur de fichiers Drag & Drop */
+/* 4. File Dropzone */
 .attack-file-dropzone {
     display: flex;
     flex-direction: column;
@@ -177,12 +163,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
 }
-.attack-file-dropzone .dropzone-prompt {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-}
-
-/* États du Dropzone */
+.attack-file-dropzone .dropzone-prompt { font-size: 0.85rem; color: var(--text-secondary); }
 .attack-file-dropzone:hover {
     border-color: var(--accent-primary);
     background-color: var(--bg-secondary);
@@ -192,67 +173,35 @@
     border-style: solid;
     background-color: color-mix(in srgb, var(--accent-primary) 10%, transparent);
 }
-.attack-file-dropzone.dragover .dropzone-icon i {
-    color: var(--accent-primary);
-}
-
-/* État 'Fichier sélectionné' */
+.attack-file-dropzone.dragover .dropzone-icon i { color: var(--accent-primary); }
 .attack-file-dropzone.file-selected {
     border-style: solid;
     border-color: var(--success);
     background-color: color-mix(in srgb, var(--success) 10%, transparent);
 }
-.attack-file-dropzone.file-selected .dropzone-icon {
-    width: 36px;
-    height: 36px;
-    color: var(--success);
-}
-.attack-file-dropzone.file-selected .dropzone-icon i {
-    color: var(--success);
-}
-.attack-file-dropzone.file-selected .dropzone-title {
-    color: var(--success);
-    font-weight: 700;
-}
+.attack-file-dropzone.file-selected .dropzone-icon i { color: var(--success); }
+.attack-file-dropzone.file-selected .dropzone-title { color: var(--success); font-weight: 700; }
 
-
-/* 5. MiTM Placeholder */
+/* 5. MiTM Placeholder (Not used, but kept) */
 .attack-placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 4rem 2rem;
-    color: var(--text-secondary);
+    /* ... styles ... */
 }
-.attack-placeholder i { width: 48px; height: 48px; margin-bottom: 1.5rem; color: var(--text-placeholder); }
-.attack-placeholder h2 { font-size: 1.5rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.5rem; }
 
-/* 6. [FIX #3] Nouveaux styles pour l'étape d'animation */
+/* 6. Simulation Stage */
 .attack-simulation-stage {
-    display: none; /* Caché par défaut */
+    display: none;
     flex-direction: column;
     align-items: center;
     gap: 3rem; 
     padding: 3.5rem; 
     max-width: 700px;
-    margin: 0 auto; /* Centré */
+    margin: 0 auto;
     border: 1px solid var(--border-color);
     border-radius: 12px;
     background-color: var(--bg-primary);
 }
-.attack-simulation-stage.visible {
-    display: flex; /* Montré par JS */
-}
-
-.attack-simulation-stage h3 {
-    font-size: 1.5rem; 
-    font-weight: 600;
-    color: var(--text-primary);
-    text-align: center;
-}
-
+.attack-simulation-stage.visible { display: flex; }
+.attack-simulation-stage h3 { font-size: 1.5rem; font-weight: 600; color: var(--text-primary); text-align: center; }
 .attack-anim-progress-bar {
     width: 100%;
     height: 14px; 
@@ -265,16 +214,9 @@
     width: 0%;
     height: 100%;
     border-radius: 7px;
-    /* transition de 3 secondes */
     transition: width 3s cubic-bezier(0.25, 1, 0.5, 1);
     background-color: var(--accent-primary);
-    background-image: linear-gradient(
-        45deg,
-        rgba(255, 255, 255, 0.15) 25%, transparent 25%,
-        transparent 50%, rgba(255, 255, 255, 0.15) 50%,
-        rgba(255, 255, 255, 0.15) 75%, transparent 75%,
-        transparent
-    );
+    background-image: linear-gradient( 45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent );
     background-size: 40px 40px;
     animation: progress-stripes 1s linear infinite;
 }
@@ -282,9 +224,6 @@
     from { background-position: 40px 0; }
     to { background-position: 0 0; }
 }
-
-/* [FIX #1] Ce style n'est plus utilisé par l'animation, 
-   mais il est utilisé par l'écran de résultats, donc on le garde. */
 .attack-anim-stats {
     display: flex;
     gap: 2.5rem; 
@@ -312,24 +251,21 @@
     font-family: monospace;
 }
 
-/* 7. [FIX #4] Nouveaux styles pour le conteneur de résultats */
+/* 7. Results Container */
 .attack-results-container {
-    display: none; /* Caché par défaut */
+    display: none;
     flex-direction: column;
     align-items: center;
     gap: 2rem; 
     padding: 3.5rem; 
     max-width: 700px;
-    margin: 0 auto; /* Centré */
+    margin: 0 auto;
     border: 1px solid var(--border-color);
     border-radius: 12px;
     background-color: var(--bg-primary);
     perspective: 1000px;
 }
-.attack-results-container.visible {
-    display: flex; /* Montré par JS */
-}
-
+.attack-results-container.visible { display: flex; }
 .attack-result-header {
     display: flex;
     flex-direction: column;
@@ -337,21 +273,12 @@
     gap: 1.25rem; 
     margin-bottom: 1rem; 
 }
-.attack-result-header i { 
-    width: 48px; 
-    height: 48px; 
-    transform: scale(0); /* Pour l'animation */
-}
-.attack-result-header h2 { 
-    font-size: 1.75rem; 
-    font-weight: 700; 
-    opacity: 0; /* Pour l'animation */
-}
+.attack-result-header i { width: 48px; height: 48px; transform: scale(0); }
+.attack-result-header h2 { font-size: 1.75rem; font-weight: 700; opacity: 0; }
 .attack-result-header.success { color: var(--success); }
 .attack-result-header.fail { color: var(--error); }
-
 .attack-result-password {
-    display: none; /* Montré par JS en cas de succès */
+    display: none;
     flex-direction: column;
     align-items: center;
     gap: 0.75rem; 
@@ -359,10 +286,7 @@
     transform: translateY(20px);
     width: 100%;
 }
-.attack-result-password label { 
-    font-size: 1rem; 
-    color: var(--text-secondary); 
-}
+.attack-result-password label { font-size: 1rem; color: var(--text-secondary); }
 .attack-result-password code {
     font-family: monospace;
     font-size: 2rem; 
@@ -375,9 +299,8 @@
     margin-top: 0.5rem;
     word-break: break-all;
 }
-
 .attack-result-message {
-    display: none; /* Montré par JS en cas d'échec */
+    display: none;
     opacity: 0;
     transform: translateY(20px);
     font-size: 1.1rem;
@@ -385,15 +308,115 @@
     color: var(--text-secondary);
     text-align: center;
 }
-
-.attack-results-container .attack-stat-card { 
-    transform: rotateY(-90deg); /* Pour l'animation */
-}
-
+.attack-results-container .attack-stat-card { transform: rotateY(-90deg); }
 .attack-results-container .btn-secondary {
     width: auto;
     padding: 0.8rem 1.75rem; 
     margin-top: 2rem; 
     opacity: 0;
     transform: translateY(20px);
+}
+
+/* --- [NEW] 8. MiTM Styles --- */
+.mitm-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 2rem 0;
+    gap: 1.5rem;
+}
+.mitm-container .btn-primary,
+.mitm-container .btn-secondary {
+    width: auto;
+    padding: 0.8rem 1.75rem;
+}
+.mitm-status {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+.mitm-status .loader {
+    display: block; /* Show the loader */
+    width: 24px;
+    height: 24px;
+    border-width: 3px;
+    color: var(--accent-primary);
+}
+.mitm-container#mitm-container-results {
+    gap: 2rem;
+    max-width: 800px; /* Wider for results */
+}
+.mitm-container#mitm-container-results h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--success);
+}
+.mitm-packet-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-primary);
+    border-radius: 8px;
+    padding: 1rem;
+}
+.mitm-packet {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: left;
+    animation: fade-in-down 0.4s ease-out;
+}
+.mitm-packet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+.mitm-packet-header h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.mitm-packet-header h4 i {
+    width: 18px;
+    height: 18px;
+    color: var(--accent-primary);
+}
+.mitm-packet-header .timestamp {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+.mitm-packet pre {
+    font-family: monospace;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    word-break: break-all;
+    background-color: var(--bg-input);
+    padding: 0.75rem;
+    border-radius: 6px;
+}
+.mitm-results-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
 }

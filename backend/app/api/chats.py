@@ -10,6 +10,11 @@ from ..security.security import get_current_user_id, oauth2_scheme
 from ..models import schemas
 from typing import List
 
+# --- [NEW] MiTM Imports ---
+from ..security.mitm_tools import get_listeners, capture_packet, hash_data
+# --- End MiTM Imports ---
+
+
 router = APIRouter(
     prefix="/chats",
     tags=["Chats"]
@@ -32,7 +37,7 @@ def get_supabase_url():
         raise HTTPException(status_code=500, detail="SUPABASE_URL not configured")
     return url
 
-# --- [MODIFIED] Chat Request Creation Endpoint ---
+# --- Chat Request Creation Endpoint ---
 
 @router.post("/request", response_model=schemas.ChatRequest)
 async def create_chat_request(
@@ -46,14 +51,12 @@ async def create_chat_request(
     
     sender_uuid = uuid.UUID(sender_id)
     
-    # 1. Check if user is trying to chat with themselves
     if sender_uuid == request_data.receiver_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You cannot send a chat request to yourself."
         )
 
-    # 2. [MODIFIED] Validate 'encryption_params' based on method
     params = request_data.encryption_params
     method = request_data.encryption_method
 
@@ -83,17 +86,40 @@ async def create_chat_request(
     except Exception as e:
          raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid encryption parameters: {e}")
 
+    
+    # --- [NEW] MiTM Capture for Chat Request ---
+    # This happens *before* saving, capturing the plaintext data
+    # and hashing it *for the demo packet only*.
+    try:
+        listeners = get_listeners()
+        if listeners:
+            # Hash all params for the MiTM demo, as requested
+            hashed_method = hash_data(method)
+            # Hash each parameter value
+            hashed_params = {k: hash_data(v) for k, v in params.items()}
+            
+            mitm_data = {
+                "sender_id": sender_id,
+                "receiver_id": str(request_data.receiver_id),
+                "hashed_method": hashed_method,
+                "hashed_params": hashed_params
+            }
+            capture_packet(packet_type="chat_request", data=mitm_data, listeners=listeners)
+    except Exception as e:
+        print(f"MiTM Chat Request Capture Error: {e}") # Don't fail request
+    # --- End MiTM Capture ---
 
-    # 3. Prepare new request for the database
+
+    # Prepare new request for the database (using *plaintext* params)
     new_request_data = {
         "sender_id": sender_id,
         "receiver_id": str(request_data.receiver_id),
         "encryption_method": method,
-        "encryption_params": params, # 'params' has been validated
+        "encryption_params": params, # 'params' are the original, plaintext params
         "status": "pending"
     }
 
-    # 4. Insert the new chat request
+    # Insert the new chat request
     try:
         supabase_url = get_supabase_url()
         token = creds.credentials
@@ -122,7 +148,7 @@ async def create_chat_request(
         raise HTTPException(status_code=500, detail=error_detail)
     
 
-# --- Other Endpoints ---
+# --- Other Endpoints (Unchanged) ---
 
 @router.get("/requests", response_model=List[schemas.ChatRequestDetails])
 async def get_chat_requests(
@@ -154,7 +180,6 @@ async def get_chat_requests(
         if not data:
             return []
 
-        # Reformat data to match ChatRequestDetails schema
         formatted_data = []
         for item in response.json():
             sender_username = item.get('sender', {}).get('username', 'Unknown')
@@ -247,6 +272,22 @@ async def send_message(
     """
     Sends a message to an accepted chat.
     """
+
+    # --- [NEW] MiTM Capture for Chat Message ---
+    # The content is already encrypted, which is exactly what we want to capture.
+    try:
+        listeners = get_listeners()
+        if listeners:
+            mitm_data = {
+                "chat_id": str(chat_id),
+                "sender_id": user_id,
+                "encrypted_content": message.encrypted_content,
+                "content_type": message.content_type
+            }
+            capture_packet(packet_type="chat_message", data=mitm_data, listeners=listeners)
+    except Exception as e:
+        print(f"MiTM Chat Message Capture Error: {e}") # Don't fail message send
+    # --- End MiTM Capture ---
     
     new_message_data = {
         "chat_id": str(chat_id),

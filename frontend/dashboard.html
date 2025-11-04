@@ -43,6 +43,7 @@
     </header>
 
     <main class="dashboard-grid">
+        <!-- Feature cards remain unchanged -->
         <div class="feature-card-container">
             <button class="feature-card" id="open-chat-modal">
                 <div class="card-icon" style="--icon-color: #3b82f6;">
@@ -91,6 +92,7 @@
     </main>
 
 
+    <!-- Chat Modal (Unchanged) -->
     <div class="modal-overlay" id="chat-modal">
         <div class="chat-wrapper">
             <button class="modal-close" data-modal-id="chat-modal" aria-label="Close modal"><i data-lucide="x"></i></button>
@@ -259,6 +261,7 @@
     </div>
 
 
+    <!-- Visualize Modal (Unchanged) -->
     <div class="modal-overlay" id="visualize-modal">
         <div class="modal-content large">
             <button class="modal-close" data-modal-id="visualize-modal" aria-label="Close modal"><i data-lucide="x"></i></button>
@@ -388,6 +391,7 @@
         </div>
     </div>
 
+    <!-- [MODIFIED] Attack Modal -->
     <div class="modal-overlay" id="attacks-modal">
         <div class="modal-content large"> <button class="modal-close" data-modal-id="attacks-modal" aria-label="Close modal"><i data-lucide="x"></i></button>
             <div class="modal-header">
@@ -401,6 +405,7 @@
                     <button class="viz-tab" data-tab="mitm">Man-in-the-Middle</button>
                 </div>
 
+                <!-- Brute Force and Dictionary tabs remain unchanged -->
                 <div class="attack-setup-container" id="attack-setup-container">
                     
                     <div class="viz-tab-panel active" id="attack-tab-bruteforce">
@@ -468,41 +473,69 @@
                         </form>
                     </div>
 
+                    <!-- [NEW] MiTM UI -->
                     <div class="viz-tab-panel" id="attack-tab-mitm">
-                        <div class="attack-placeholder">
-                            <i data-lucide="construction"></i>
-                            <h2>Man-in-the-Middle Attack</h2>
-                            <p>This attack is a vulnerability explanation rather than a live simulation. MiTM vulnerability exists because the application is run over HTTP (non-secure connection) in this demo environment.</p>
-                            <div class="attack-mitm-explanation">
-                                <h3>To be continued</h3>
+                        <div class="mitm-container" id="mitm-container-setup">
+                            <p class="viz-description">Start an attack to listen for network traffic from other users. Intercepted packets (logins, chat requests, messages) will appear here.</p>
+                            <button class="btn btn-primary" id="mitm-start-btn">
+                                <i data-lucide="rss"></i>
+                                <span>Start MiTM Attack</span>
+                                <div class="loader"></div>
+                            </button>
+                        </div>
+
+                        <div class="mitm-container" id="mitm-container-active" style="display: none;">
+                            <div class="mitm-status">
+                                <div class="mitm-status-icon">
+                                    <div class="loader"></div>
+                                </div>
+                                <span id="mitm-status-text">Listening for packets...</span>
+                            </div>
+                            <button class="btn btn-secondary" id="mitm-stop-btn">
+                                <i data-lucide="shield-off"></i>
+                                <span>Stop Attack</span>
+                            </button>
+                        </div>
+
+                        <div class="mitm-container" id="mitm-container-results" style="display: none;">
+                            <h3 id="mitm-results-title"></h3>
+                            <div class="mitm-packet-list" id="mitm-packet-list">
+                                <!-- Intercepted packets will be rendered here by attacks.js -->
+                            </div>
+                            <div class="mitm-results-actions">
+                                <button class="btn btn-primary" id="mitm-continue-btn">
+                                    <i data-lucide="rss"></i>
+                                    <span>Continue Attack</span>
+                                </button>
+                                <button class="btn btn-secondary" id="mitm-stop-results-btn">
+                                    <i data-lucide="shield-off"></i>
+                                    <span>Stop Attack</span>
+                                </button>
                             </div>
                         </div>
                     </div>
+                    <!-- [END NEW] MiTM UI -->
+
                 </div>
 
+                <!-- Brute Force/Dictionary Simulation/Results (Unchanged) -->
                 <div class="attack-simulation-stage" id="attack-simulation-stage" style="display: none;">
                     <h3 id="attack-anim-title">Running Brute Force Attack...</h3>
-                    
                     <div class="attack-anim-progress-bar">
                         <div id="attack-anim-progress"></div>
                     </div>
-                    
-                    </div>
-
+                </div>
                 <div class="attack-results-container" id="attack-results-container" style="display: none;">
                     <div class="attack-result-header" id="attack-result-header">
                         <h2 id="attack-result-title">...</h2>
                     </div>
-
                     <div class="attack-result-password" id="attack-result-password-box" style="display: none;">
                         <label>Password Found:</label>
                         <code id="attack-result-password"></code>
                     </div>
-                    
                     <div class.attack-result-message" id="attack-result-message-box" style="display: none;">
                         <p id="attack-result-message"></p>
                     </div>
-
                     <div class="attack-anim-stats" id="attack-result-stats">
                         <div class="attack-stat-card">
                             <label>Total Attempts</label>
@@ -522,7 +555,7 @@
         </div>
     </div>
     
-
+    <!-- Steganography Modal (Unchanged) -->
     <div class="modal-overlay" id="stego-modal">
         <div class="modal-content large"> <button class="modal-close" data-modal-id="stego-modal" aria-label="Close modal"><i data-lucide="x"></i></button>
             <div class="modal-header"><h2>Steganography Tools</h2></div>
