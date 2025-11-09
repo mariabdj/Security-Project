@@ -1,6 +1,6 @@
 /* ---
    SSAD Steganography Logic (steganography.js)
-   [MODIFIED FOR MATRIX VISUALIZATION, MAXIMUM DETAIL, AND ROBUSTNESS]
+   [MODIFIED FOR NEW CARD-BASED VISUALIZATION & BUG FIXES]
    --- */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -43,22 +43,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const downloadBtn = document.getElementById('stego-download-btn');
     const newOpBtn = document.getElementById('stego-new-op-btn');
 
-    // --- UI/State Helpers ---
+    // --- UI/State Helpers (Unchanged) ---
 
     function showStatus(message, type = 'error') {
-        const statusEl = document.getElementById('stego-status-message');
-        if (statusEl) {
+        if(typeof showNotification === 'function') {
+            showNotification(message, type);
+        } else {
+            console.warn("showNotification not found. Using console.", message);
+            const statusEl = document.getElementById('stego-status-message') || document.createElement('div');
+            statusEl.id = 'stego-status-message';
             statusEl.textContent = message;
             statusEl.className = `stego-status ${type}`; 
             statusEl.style.display = 'block';
-             anime({ targets: statusEl, opacity: [0, 1], translateY: [-10, 0], duration: 300 });
+            if(!statusEl.parentElement) setupContainer.prepend(statusEl);
         }
     }
 
     function clearStatus() {
         const statusEl = document.getElementById('stego-status-message');
         if (statusEl) {
-             anime({ targets: statusEl, opacity: 0, translateY: [0, -10], duration: 200, complete: () => { statusEl.style.display = 'none'; } });
+            statusEl.style.display = 'none';
         }
     }
 
@@ -68,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fileNameDisplay.textContent = 'Click to select file...';
         fileLabel.classList.remove('file-selected', 'dragover');
         fileIcon.setAttribute('data-lucide', 'upload-cloud');
-        lucide.createIcons();
+        if(typeof lucide !== 'undefined') lucide.createIcons();
         filePreview.innerHTML = ''; 
         capacityInfo.textContent = '';
         updateButtonStates();
@@ -76,7 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function updateButtonStates() {
         const message = secretMessageInput.value.trim();
-        // Decode only requires a file
         const canStart = selectedFile && (currentMode === 'decode' || (currentMode === 'encode' && message.length > 0));
         startVizBtn.disabled = !canStart;
     }
@@ -106,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Core UI Logic ---
+    // --- Core UI Logic (Unchanged) ---
 
     // 1. Tab Switching
     tabs.forEach(tab => {
@@ -143,22 +146,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleFileSelect() {
         if (fileInput.files.length > 0) {
             const file = fileInput.files[0];
-            
             const isValid = (currentFileType === 'image' && file.type.startsWith('image/')) ||
                             (currentFileType === 'audio' && file.type === 'audio/wav') ||
                             (currentFileType === 'video' && file.type.startsWith('video/'));
-
             if (!isValid) {
                 showStatus(`Invalid file type. Please select a correct ${currentFileType} file.`, 'error');
                 clearFileInput(); 
                 return;
             }
-
             selectedFile = file;
             fileNameDisplay.textContent = selectedFile.name;
             fileLabel.classList.add('file-selected');
             fileIcon.setAttribute('data-lucide', 'check-circle');
-            lucide.createIcons();
+            if(typeof lucide !== 'undefined') lucide.createIcons();
             showFilePreview(selectedFile);
             clearStatus();
             updateButtonStates();
@@ -192,14 +192,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     secretMessageInput.addEventListener('input', updateButtonStates);
 
-    // --- 4. Animation Controls ---
+    // 4. Animation Controls (Unchanged)
     animNextBtn.addEventListener('click', () => { renderAnimationStep(currentStepIndex + 1); });
     animPrevBtn.addEventListener('click', () => { renderAnimationStep(currentStepIndex - 1); });
     downloadBtn.addEventListener('click', handleDownloadEncodedFile);
     newOpBtn.addEventListener('click', updateUIVisibility);
 
-    // --- 5. Start Visualization ---
-
+    // 5. Start Visualization (Unchanged)
     startVizBtn.addEventListener('click', async () => {
         if (!selectedFile) {
              showStatus("Please select a file.", 'info');
@@ -252,9 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
             renderAnimationStep(currentStepIndex); 
 
         } catch (error) {
-            // Log the raw error to console for debugging
             console.error("Visualization Error:", error);
-            // Display a user-friendly message
             showStatus(error.message, 'error');
             setupContainer.style.display = 'flex';
             animContainer.style.display = 'none';
@@ -262,22 +259,20 @@ document.addEventListener('DOMContentLoaded', () => {
             setButtonLoading(startVizBtn, false);
         }
     });
-
+    
+    // Download Handler (Unchanged)
     function handleDownloadEncodedFile() {
         if (!finalDownloadData?.data_url) {
             showStatus('Encoded file data not available for download.', 'error');
             return;
         }
-
         const dataUrl = finalDownloadData.data_url;
         const mimeType = finalDownloadData.mime_type || 'application/octet-stream';
-        
         const base64Index = dataUrl.indexOf(';base64,');
         if (base64Index === -1) {
              showStatus('Error: Invalid Base64 data URL format.', 'error');
              return;
         }
-        
         const byteCharacters = atob(dataUrl.substring(base64Index + 8));
         const byteNumbers = new Array(byteCharacters.length);
         for (let i = 0; i < byteCharacters.length; i++) {
@@ -285,46 +280,47 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], { type: mimeType });
-
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        
         const originalName = finalDownloadData.original_filename.split('.').slice(0, -1).join('.') || 'encoded_file';
         let extension = currentFileType === 'image' ? 'png' : finalDownloadData.original_filename.split('.').pop() || 'bin';
-        // For video append, maintain original extension
         if (currentFileType === 'video' && finalDownloadData.original_filename?.includes('.')) {
              extension = finalDownloadData.original_filename.split('.').pop();
         }
-        
         link.download = `${originalName}_stego.${extension}`;
-        
         document.body.appendChild(link);
         link.click();
-        
         document.body.removeChild(link);
         URL.revokeObjectURL(link.href);
-        
         showStatus('Encoded file downloaded!', 'success');
     }
     
     // --- 6. Helper Renderers (Detailed Visuals) ---
 
+    /**
+     * [MODIFIED] Renders the Step 1 "Message to Bits" block with a clean table.
+     */
     function renderMessageToBits(media, data) {
-         let bitStreamHtml = (data.message_bits || '').match(/.{1,8}/g) || [];
+         // Fallback for safety
+         data = data || {};
+         
+         let bitStreamHtml = (data.message_bits || '...').match(/.{1,8}/g) || [];
          
          let messageTableHtml = `
-             <table class="stego-conversion-table">
-                 <thead><tr><th>Char</th><th>ASCII (Dec)</th><th>Binary (8 Bits)</th></tr></thead>
-                 <tbody>
-                 ${(data.message_data || []).slice(0, 5).map(item => `
-                     <tr>
-                         <td>${item.char}</td>
-                         <td>${item.ascii}</td>
-                         <td>${item.binary}</td>
-                     </tr>
-                 `).join('')}
-                 </tbody>
-             </table>
+             <div class="stego-table-container">
+                 <table class="stego-conversion-table">
+                     <thead><tr><th>Char</th><th>ASCII (Dec)</th><th>Binary (8 Bits)</th></tr></thead>
+                     <tbody>
+                     ${(data.message_data || []).slice(0, 5).map(item => `
+                         <tr>
+                             <td>${(item.char === ' ' ? '[Space]' : item.char) || '?'}</td>
+                             <td>${item.ascii || '?'}</td>
+                             <td>${item.binary || '...'}</td>
+                         </tr>
+                     `).join('')}
+                     </tbody>
+                 </table>
+             </div>
              <p class="dim" style="margin-top: 10px;">Showing first 5 characters (including delimiter if present).</p>
          `;
 
@@ -332,13 +328,11 @@ document.addEventListener('DOMContentLoaded', () => {
              <div class="stego-block stego-conversion" style="opacity:1; transform:translateY(0);">
                  <h4>Character-to-Binary Conversion Matrix</h4>
                  ${messageTableHtml}
-
                  <h4 style="margin-top: 1.5rem;">Assembled Binary Stream</h4>
                  <p class="viz-description">This stream of ${data.message_bits?.length || '...'} bits is inserted LSB by LSB into the ${media} file.</p>
                  <code class="stego-hex-view" style="font-size: 0.85rem; padding: 0.75rem 1rem;">
                      ${bitStreamHtml.map(b => `<span class="highlight-byte dim">${b}</span>`).join(' ')}
                  </code>
-                 
                  <div class="stego-capacity-bar" style="margin-top:1.5rem;">
                      <div class="stego-capacity-progress ${data.is_capacity_ok === false ? 'error' : ''}" style="width: ${Math.min(100, (data.message_bits?.length || 0) / (data.capacity || 1) * 100)}%;">
                          <span>${Math.round((data.message_bits?.length || 0) / (data.capacity || 1) * 100)}% Used</span>
@@ -354,87 +348,108 @@ document.addEventListener('DOMContentLoaded', () => {
          return html;
     }
 
+    /**
+     * [MODIFIED] Renders the LSB operation in the "card" format.
+     * Fixes "undefined" bugs and adds color preview.
+     */
     function renderLsbOperationMatrix(media, step) {
-        const data = step.data;
+        const data = step.data || {}; // Safety fallback
         const mode = step.mode;
         const isImage = media === 'image';
         const isEncode = mode === 'encode';
 
-        // Prepare Channel Data Array
-        let channels;
+        let channels = [];
+        let containerHtml = '<div class="stego-lsb-viz-container">';
+        
+        // --- 1. Add Color Preview for Images ---
         if (isImage) {
-            channels = [
-                { name: 'Red', val: data.r_orig, bin: data.r_orig_bin, new_val: data.r_new, new_bin: data.r_new_bin, bit: data.bit_to_hide || (data.r_orig & 1) },
-                { name: 'Green', val: data.g_orig, bin: data.g_orig_bin, new_val: data.g_new, new_bin: data.g_new_bin, bit: data.bit_to_hide_g || (data.g_orig & 1) },
-                { name: 'Blue', val: data.b_orig, bin: data.b_orig_bin, new_val: data.b_new, new_bin: data.b_new_bin, bit: data.bit_to_hide_b || (data.b_orig & 1) }
-            ].filter(c => c.val !== undefined);
-        } else {
-            // Audio (Sample)
-            channels = [
-                { name: 'Sample', val: data.sample_orig, bin: data.sample_orig_bin, new_val: data.sample_new, new_bin: data.sample_new_bin, bit: data.bit_to_hide || (data.sample_orig & 1) }
-            ];
+            // Use fallbacks for all values to prevent "undefined"
+            const r_orig = data.r_orig ?? 0;
+            const g_orig = data.g_orig ?? 0;
+            const b_orig = data.b_orig ?? 0;
+            const r_new = data.r_new ?? 0;
+            const g_new = data.g_new ?? 0;
+            const b_new = data.b_new ?? 0;
+
+            containerHtml += `
+                <div class="stego-color-preview-block">
+                    <h4>Pixel ${data.index ?? '?'} Color Change</h4>
+                    <div class="stego-color-preview">
+                        <div class="color-box" style="background-color: rgb(${r_orig}, ${g_orig}, ${b_orig})" title="Original: rgb(${r_orig}, ${g_orig}, ${b_orig})"></div>
+                        <span class="color-arrow">&rarr;</span>
+                        <div class="color-box" style="background-color: rgb(${r_new}, ${g_new}, ${b_new})" title="New: rgb(${r_new}, ${g_new}, ${b_new})"></div>
+                    </div>
+                </div>
+            `;
         }
 
-        const tableHeaders = [
-            isImage ? 'Channel' : 'Unit', 'Decimal (Orig)', 'Binary (Orig)', 'Operation', isEncode ? 'Hidden Bit' : 'Extracted Bit', 'Binary (New)', 'Decimal (New)'
-        ];
-
-        const renderCell = (content, highlight = false) => `<td class="${highlight ? 'highlight-cell' : ''}">${content}</td>`;
+        // --- 2. Populate Channel Data ---
+        if (isImage) {
+            // IMAGE: R, G, B channels
+            channels = [
+                { name: 'Red', orig: data.r_orig, bin: data.r_orig_bin, bit: isEncode ? data.bit_to_hide_r : data.bit_extracted_r, new_val: data.r_new, new_bin: data.r_new_bin, mask: '254' },
+                { name: 'Green', orig: data.g_orig, bin: data.g_orig_bin, bit: isEncode ? data.bit_to_hide_g : data.bit_extracted_g, new_val: data.g_new, new_bin: data.g_new_bin, mask: '254' },
+                { name: 'Blue', orig: data.b_orig, bin: data.b_orig_bin, bit: isEncode ? data.bit_to_hide_b : data.bit_extracted_b, new_val: data.b_new, new_bin: data.b_new_bin, mask: '254' }
+            ];
+        } else {
+            // AUDIO: Single "Sample" channel
+            channels = [
+                { name: 'Sample', orig: data.sample_orig, bin: data.sample_orig_bin, bit: isEncode ? data.bit_to_hide : data.bit_extracted, new_val: data.sample_new, new_bin: data.sample_new_bin, mask: '~1' }
+            ];
+        }
         
-        let tableRows = channels.map((channel, i) => {
-            const isTarget = i === (data.target_channel_index || 0);
-            
-            const origLsb = channel.bin?.slice(-1) || '?';
-            const newLsb = channel.new_bin?.slice(-1) || '?';
-            const bit = channel.bit;
-            
-            // For LSB, the mask is 0b11111110 (or ~1 for signed int16)
-            const mask = isImage ? '11111110' : '...11111110';
-            
-            const operation = isEncode 
-                ? `(Val & ${mask}) | ${bit}`
-                : `Val & 1`;
-                
-            const finalBinary = isEncode 
-                ? (channel.new_bin?.slice(0, -1) || '...') + `<span class="lsb modified">${newLsb}</span>`
-                : (channel.bin?.slice(0, -1) || '...') + `<span class="lsb extracted">${origLsb}</span>`;
-            
-            const newDecimal = isEncode 
-                ? channel.new_val
-                : channel.val; // Decoding doesn't change the value
+        // --- 3. Build Channel Cards ---
+        containerHtml += `<div class="stego-lsb-viz ${isImage ? 'image' : 'audio'}">`;
 
-            return `<tr class="${isTarget ? 'active-row' : 'dim'}">
-                ${renderCell(channel.name)}
-                ${renderCell(channel.val)}
-                ${renderCell(channel.bin?.slice(0, -1) + `<span class="lsb">${origLsb}</span>`)}
-                ${renderCell(operation)}
-                ${renderCell(bit, true)}
-                ${renderCell(finalBinary)}
-                ${renderCell(newDecimal)}
-            </tr>`;
-        }).join('');
+        // Helper to format binary string
+        const formatBinary = (binStr, lsbClass) => {
+            const safeBin = binStr || '...';
+            if (safeBin.length < 2) return `<span class="lsb ${lsbClass}">${safeBin}</span>`;
+            return `${safeBin.slice(0, -1)}<span class="lsb ${lsbClass}">${safeBin.slice(-1)}</span>`;
+        };
         
-        const unitType = isImage ? `Pixel ${data.index}` : `Sample ${data.index}`;
-
-        return `
-            <div class="stego-block" style="opacity:1; transform:translateY(0);">
-                <h4>LSB ${isEncode ? 'Modification' : 'Extraction'} Matrix (${unitType})</h4>
-                <p class="viz-description">**Target Unit:** ${unitType}. Showing how the bitwise operation directly manipulates the **Least Significant Bit (LSB)**.</p>
-                <div class="stego-table-container">
-                    <table class="stego-operation-matrix">
-                        <thead>
-                            <tr>${tableHeaders.map(h => `<th>${h}</th>`).join('')}</tr>
-                        </thead>
-                        <tbody>
-                            ${tableRows}
-                        </tbody>
-                    </table>
+        channels.forEach(ch => {
+            // Add fallbacks (?? 0 or ?? '?') to prevent "undefined"
+            const bit = ch.bit ?? '?';
+            const op = isEncode ? `(Value & ${ch.mask}) | ${bit}` : `Value & 1`;
+            const bitClass = isEncode ? 'modified' : 'extracted';
+            const bitLabel = isEncode ? 'Hidden Bit' : 'Extracted Bit';
+            
+            containerHtml += `
+                <div class="stego-lsb-channel-card ${ch.name}">
+                    <h4>${ch.name} Channel</h4>
+                    
+                    <div class="stego-lsb-group">
+                        <label>Before</label>
+                        <span class="value">${ch.orig ?? 0}</span>
+                        <span class="binary">${formatBinary(ch.bin, '')}</span>
+                    </div>
+                    
+                    <div class="stego-lsb-group">
+                        <label>Calculation</label>
+                        <span class="op">${op}</span>
+                        <span class="bit ${isEncode ? '' : 'decode'}">${bitLabel}: ${bit}</span>
+                    </div>
+                    
+                    <div class="stego-lsb-group">
+                        <label>After</label>
+                        <span class="value new">${ch.new_val ?? 0}</span>
+                        <span class="binary new">${formatBinary(ch.new_bin, bitClass)}</span>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        });
+        
+        containerHtml += `</div></div>`; // Close .stego-lsb-viz and .stego-lsb-viz-container
+        return containerHtml;
     }
 
+
+    /**
+     * [MODIFIED] Renders the byte assembly block with a cleaner table.
+     */
     function renderLsbAssembly(media, data) {
+         data = data || {}; // Safety fallback
          let binaryString = data.binary_stream || '';
          let blocks = [];
          
@@ -442,7 +457,6 @@ document.addEventListener('DOMContentLoaded', () => {
              try { return String.fromCharCode(charCode); } catch { return '?'; }
          };
          
-         // Only show the assembled bytes
          for (let i = 0; i < binaryString.length; i += 8) {
              let block = binaryString.substring(i, i + 8);
              if (block.length >= 8) { 
@@ -459,108 +473,132 @@ document.addEventListener('DOMContentLoaded', () => {
                  <h4>${isEncoding ? 'Byte Concealment' : 'Byte Extraction & Reconstruction'}</h4>
                  
                  <div style="margin-bottom: 1rem;">
-                     <label class="dim">Current Assembled Binary Stream:</label>
+                     <label class="dim" style="font-weight: 600; font-size: 0.9rem;">Current Assembled Binary Stream:</label>
                      <code class="stego-hex-view" style="font-size: 0.85rem; padding: 0.75rem 1rem;">
-                         ${(data.message_bits || binaryString).match(/.{1,8}/g).map((b, i) => {
-                             const isFullByte = blocks[i]?.isFull;
+                         ${(data.message_bits || binaryString).match(/.{1,8}/g)?.map((b, i) => {
+                             const isFullByte = blocks[i] && blocks[i].isFull;
                              return `<span class="highlight-byte ${isFullByte ? '' : 'dim'}" title="${isFullByte ? blocks[i].char : 'Incomplete'}">${b}</span>`;
-                         }).join(' ')}
+                         }).join(' ') || '...'}
                      </code>
                  </div>
                  
-                 <div class="stego-calc" style="text-align: center; font-size: 1.1rem; font-weight: 500;">
-                    ${blocks.length > 0 ? `
-                        <p>Total Units Used for 1st Byte: <span class="highlight-bit">${data.units_used || '...'} ${media === 'image' ? 'Channels' : 'Samples'}</span></p>
-                        <p style="margin-top: 10px;">First Decoded Character: <span class="highlight-bit">${blocks[0].char} (ASCII: ${parseInt(blocks[0].block, 2)})</span></p>
-                    ` : `
-                        <p>Bits Collected: ${binaryString.length} / 8. Collecting more bits to form first character...</p>
-                    `}
+                 <div class="stego-table-container">
+                     <table class="stego-conversion-table">
+                         <thead>
+                             <tr>
+                                 <th>Total Units Used</th>
+                                 <th>First 8 Bits</th>
+                                 <th>Assembled Character</th>
+                             </tr>
+                         </thead>
+                         <tbody>
+                            ${blocks.length > 0 ? `
+                                <tr>
+                                    <td>${data.units_used || '...'} ${media === 'image' ? 'Channels' : 'Samples'}</td>
+                                    <td>${blocks[0].block || '...'}</td>
+                                    <td>'${blocks[0].char || '?'}' (ASCII: ${parseInt(blocks[0].block, 2) || '?'})</td>
+                                </tr>
+                            ` : `
+                                <tr>
+                                    <td colspan="3">Collecting more bits to form first character...</td>
+                                </tr>
+                            `}
+                         </tbody>
+                     </table>
                  </div>
-                 
-                 <p class="dim" style="margin-top:1rem;">Status: ${currentMode === 'decode' ? 'Checking' : 'Continuing'} for delimiter '####'.</p>
+                 <p class="dim" style="margin-top:1rem; text-align:center;">Status: ${currentMode === 'decode' ? 'Checking' : 'Continuing'} for delimiter '####'.</p>
              </div>
          `;
     }
 
+    /**
+     * [MODIFIED] Renders the Append (Video) step with cleaner Hex view.
+     */
     function renderAppendStep(media, step) {
-        const data = step.data;
+        const data = step.data || {}; // Safety fallback
         const isEncode = step.mode === 'encode';
         let hexViewContent = '';
         
-        // Use optional chaining/default values safely
         const original_size = data.original_size || 0;
         const total_new_size = data.total_new_size || 0;
-        const message_size = data.message_size || 0;
-        const original_end_hex = (original_size - 1).toString(16).toUpperCase();
-        const total_new_size_hex = (total_new_size - 1).toString(16).toUpperCase();
         
         if (isEncode) {
              if (step.step_title.includes("File Structure")) {
                  hexViewContent = `
-                    <p class="dim">Original File Size: **${original_size.toLocaleString()}** Bytes (Ends at 0x${original_end_hex}).</p>
-                    <p class="dim">Video Header Preview (First 40 Bytes):</p>
-                    <code class="stego-hex-view" style="font-size: 0.85rem;">${(data.file_header_view || 'N/A').match(/.{1,16}/g)?.join(' ') || '...'}</code>
-                    <p style="margin-top: 10px;">Video players use this initial metadata and stop reading at the reported end.</p>
+                    <p class="viz-description">Original File Size: **${original_size.toLocaleString()}** Bytes.</p>
+                    <label class="dim" style="font-weight: 600; font-size: 0.9rem;">File Header (Start):</label>
+                    <code class="stego-hex-view" style="font-size: 0.85rem;">${data.file_hex_start || '...'}</code>
+                    <label class="dim" style="font-weight: 600; font-size: 0.9rem; margin-top: 1rem;">File Tail (End):</label>
+                    <code class="stego-hex-view" style="font-size: 0.85rem;">${data.file_hex_end || '...'}</code>
+                 `;
+             } else if (step.step_title.includes("Concatenating")) {
+                 hexViewContent = `
+                    <p class="viz-description">New Total File Size: **${total_new_size.toLocaleString()}** Bytes.</p>
+                    <label class="dim" style="font-weight: 600; font-size: 0.9rem;">Appended Data Stream (Hexadecimal View):</label>
+                    <code class="stego-hex-view" style="font-size:0.9rem; word-break: break-all;">
+                        <span class="dim" title="Original File End">... ${data.original_hex_end || ''}</span>
+                        <span class="highlight-delimiter" title="Delimiter">${data.delimiter_hex || '...'}</span>
+                        <span class="highlight-message" title="Secret Message">${data.message_hex_start || '...'} ... ${data.message_hex_end || '...'}</span>
+                    </code>
                  `;
              } else {
-                 hexViewContent = `
-                    <p class="dim">Original File Stream</p>
-                    <i data-lucide="chevrons-down" style="width:24px; color:var(--accent-primary); margin:1rem 0;"></i>
-                    <p class="dim" style="text-align: center;">Appended Data Stream (Hexadecimal View):</p>
-                    <code class="stego-hex-view" style="font-size:0.9rem; word-break: break-all;">
-                        <span class="highlight-delimiter" title="Delimiter">${data.delimiter_bytes_hex || '...'}</span>
-                        <span class="highlight-message" title="Secret Message">${data.message_bytes_prefix || '...'}</span><span class="dim">...</span><span class="highlight-message">${data.message_bytes_suffix || '...'}</span>
-                    </code>
-                    <p style="font-weight: 600; margin-top: 1rem;">New Total File Size: ${total_new_size.toLocaleString()} Bytes (Ends at 0x${total_new_size_hex})</p>
-                 `;
+                 // Fallback for other encode steps
+                 hexViewContent = `<p class="dim">${step.description}</p>`;
              }
         } else { // Decode
              if (data.is_found === false) {
                   hexViewContent = `
-                    <div class="stego-calc" style="background-color: var(--bg-primary); border: 2px solid var(--error);">
-                        <p style="font-weight: 700; color:var(--error);">Delimiter **${data.delimiter || '...'}** was NOT found in the file.</p>
-                        <i data-lucide="alert-triangle" style="width:24px; color:var(--error); margin:1rem 0;"></i>
-                        <p>Scanning stopped after checking ${data.file_size?.toLocaleString() || '...'} bytes.</p>
+                    <div class="stego-results" style="border-color: var(--error);">
+                        <h4 style="color: var(--error);"><i data-lucide="alert-triangle" style="width:18px; height:18px; margin-right: 5px;"></i>Delimiter Not Found</h4>
+                        <pre style="background-color: var(--bg-primary); color: var(--error);">Scanning stopped after checking ${data.file_size?.toLocaleString() || '...'} bytes.</pre>
                     </div>
                 `;
              } else if (step.step_title.includes("Byte-to-Character Conversion")) {
                  hexViewContent = `
-                    <p class="dim">Extracted Message Bytes (${message_size.toLocaleString()} Bytes):</p>
-                    <code class="stego-hex-view" style="font-size:0.9rem; word-break: break-all;">
-                        <span class="highlight-message">${data.message_bytes_prefix || '...'}</span><span class="dim">...</span><span class="highlight-message">${data.message_bytes_suffix || '...'}</span>
-                    </code>
-                    <div class="stego-calc" style="text-align: center; margin-top: 1rem;">
-                        <p>Decoded Text Length: ${data.final_message_length?.toLocaleString() || '...'} Characters</p>
-                        <p style="font-weight: 700; color:var(--success); font-size: 1.2rem; margin-top: 5px;">Preview: "${(data.final_message || '...').substring(0, 30)}..."</p>
+                    <div class="stego-results" style="border-color: var(--success);">
+                        <h4 style="color: var(--success);"><i data-lucide="check" style="width:18px; height:18px; margin-right: 5px;"></i>Message Stream Decoded</h4>
+                        <p class="dim" style="font-size: 0.9rem; margin-bottom: 0.5rem;">Extracted ${data.message_size?.toLocaleString() || '?'} bytes and converted from UTF-8.</p>
+                        <pre>${data.final_message_preview || '...'}</pre>
                     </div>
                 `;
              } else if (step.step_title.includes("Message Identified")) {
                  hexViewContent = `
                     <p class="dim">File Size: ${data.file_size?.toLocaleString() || '...'} Bytes.</p>
-                    <p class="dim">Search Status: <span style="color: var(--success); font-weight: 600;">Delimiter found!</span></p>
-                    <i data-lucide="chevrons-down" style="width:24px; color:var(--success); margin:1rem 0;"></i>
-                    <p>The message stream is the final **${message_size.toLocaleString()}** bytes after the delimiter.</p>
-                 `;
+                    <p class="viz-description" style="font-weight: 600; color:var(--success);">Delimiter found! The subsequent **${data.message_size?.toLocaleString() || '?'} bytes** are the hidden message.</p>
+                    <label class="dim" style="font-weight: 600; font-size: 0.9rem; margin-top: 1rem;">Message Stream (Hex Preview):</label>
+                     <code class="stego-hex-view" style="font-size:0.9rem; word-break: break-all;">
+                        <span class="highlight-message" title="Secret Message">${data.message_bytes_hex_start || '...'} ... ${data.message_bytes_hex_end || '...'}</span>
+                    </code>
+                `;
+             } else {
+                 // Fallback for other decode steps
+                 hexViewContent = `<p class="dim">${step.description}</p>`;
              }
         }
         
         return `
             <div class="stego-block" style="opacity:1; transform:translateY(0);">
-                <h4>${step.step_title}</h4>
                 ${hexViewContent}
             </div>
         `;
     }
 
+    /**
+     * [MODIFIED] Renders the final result block with a cleaner layout.
+     */
     function renderFinalResult(mode, data) {
+        data = data || {}; // Safety fallback
         let resultHtml = '';
         if (mode === 'encode') {
             finalActions.style.display = 'flex';
             downloadBtn.style.display = 'flex';
             resultHtml = `
-                <h3 style="color:var(--success);"><i data-lucide="check-circle" style="width:32px; margin-right:10px;"></i> ENCODING COMPLETE</h3>
-                <p class="viz-description" style="max-width: 400px; text-align: center;">The message was successfully concealed. Click **Download** to get the steganographic file.</p>
-                <div class="attack-anim-stats" style="max-width: 500px;">
+                <div style="display: flex; flex-direction:column; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
+                    <i data-lucide="check-circle" style="width:40px; height: 40px; color:var(--success);"></i>
+                    <h3 style="color:var(--success);">ENCODING COMPLETE</h3>
+                </div>
+                <p class="viz-description" style="max-width: 450px; text-align: center;">The message was successfully concealed. Click **Download** to get the steganographic file.</p>
+                <div class="attack-anim-stats" style="max-width: 500px; margin-top: 1rem;">
                     <div class="attack-stat-card">
                         <label>Total Hidden Bits/Bytes</label>
                         <span>${(data.message_bits_count || data.message_size || 0).toLocaleString()} ${currentFileType === 'video' ? 'Bytes' : 'Bits'}</span>
@@ -575,15 +613,18 @@ document.addEventListener('DOMContentLoaded', () => {
             finalActions.style.display = 'flex';
             downloadBtn.style.display = 'none';
             resultHtml = `
-                <h3 style="color:var(--accent-primary);"><i data-lucide="lock-open" style="width:32px; margin-right:10px;"></i> DECODING COMPLETE</h3>
-                <p class="viz-description" style="max-width: 400px; text-align: center;">The secret message was successfully extracted from the file:</p>
-                <div class="stego-results" style="max-width: 500px; width: 100%; border: 1px solid var(--accent-primary);">
+                <div style="display: flex; flex-direction:column; align-items: center; gap: 0.5rem; margin-bottom: 1.5rem;">
+                    <i data-lucide="lock-open" style="width:40px; height: 40px; color:var(--accent-primary);"></i>
+                    <h3 style="color:var(--accent-primary);">DECODING COMPLETE</h3>
+                </div>
+                <p class="viz-description" style="max-width: 500px; text-align: center;">The secret message was successfully extracted from the file:</p>
+                <div class="stego-results" style="max-width: 500px; width: 100%;">
                     <h4>Decoded Message:</h4>
-                    <pre id="stego-decoded-message" style="background-color:var(--bg-input);">${data.final_message || '[No hidden message found]'}</pre>
+                    <pre id="stego-decoded-message">${data.final_message || '[No hidden message found]'}</pre>
                 </div>
             `;
         }
-        return `<div class="stego-block" style="opacity:1; transform:translateY(0); text-align:center;">${resultHtml}</div>`;
+        return `<div class="stego-block" style="opacity:1; transform:translateY(0); align-items:center;">${resultHtml}</div>`;
     }
 
     // --- 7. Main Step Renderer ---
@@ -601,48 +642,54 @@ document.addEventListener('DOMContentLoaded', () => {
         anime.remove('.stego-block'); 
 
         animTitle.textContent = step.step_title;
-        animDescription.textContent = step.description;
+        animDescription.innerHTML = (step.description || '...').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // Parse markdown bold
         animCounter.textContent = `Step ${currentStepIndex + 1} / ${visualizationSteps.length}`;
         animPrevBtn.disabled = (currentStepIndex === 0);
         animNextBtn.disabled = (currentStepIndex === visualizationSteps.length - 1);
         
         let contentHtml = '';
 
+        // --- [MODIFIED] Simplified Step Logic ---
+
         if (step.step_title.includes("Final Summary") || step.step_title.includes("Final Decoded Result")) {
              contentHtml = renderFinalResult(mode, step.data);
+        
         } else if (step.step_title.includes("Message Conversion") || step.step_title.includes("Delimiter Preparation")) {
             contentHtml = renderMessageToBits(media, step.data);
+        
         } else if (media === 'image' || media === 'audio') {
-            // New matrix view for step 2 & 3
-            if (step.step_title.includes("LSB Modification Matrix") || step.step_title.includes("LSB Extraction Matrix")) {
+            // LSB Steps
+            if (step.step_title.includes("LSB") || step.step_title.includes("Initial Pixel") || step.step_title.includes("Initial Sample")) {
                 contentHtml = renderLsbOperationMatrix(media, step);
-            } else if (step.step_title.includes("Completion of Pixel 0") || step.step_title.includes("First Character Assembled") || step.step_title.includes("Hiding the First Byte")) {
+            } else if (step.step_title.includes("Byte Assembly") || step.step_title.includes("Hiding the First Byte")) {
                 contentHtml = renderLsbAssembly(media, step.data);
-            } else if (step.step_title.includes("Subsequent Pixels Modification") || step.step_title.includes("Processing Subsequent Samples") || step.step_title.includes("Delimiter Search")) {
+            } else if (step.step_title.includes("Continuous LSB") || step.step_title.includes("Delimiter Search") || step.step_title.includes("Processing Subsequent Samples")) {
                  contentHtml = `
                     <div class="stego-block" style="opacity:1; transform:translateY(0);">
                         <h4>Continuous LSB Operation</h4>
                         <p class="viz-description">${step.description}</p>
-                        <div class="stego-calc">
-                            <p style="font-weight: 700;">Operation continues on subsequent data units:</p>
-                            <p>Units ${mode === 'encode' ? 'Modified' : 'Checked'}: <span class="highlight-bit">${(step.data.pixels_modified || step.data.samples_modified || 0).toLocaleString()}</span></p>
-                            <p>Units Unchanged: <span class="dim">${(step.data.pixels_unchanged || step.data.samples_unchanged || '...').toLocaleString()}</span></p>
-                            <p class="dim" style="margin-top: 10px;">Status: Checking stream for delimiter '####'.</p>
-                        </div>
+                        <div class="stego-table-container">
+                             <table class="stego-conversion-table"> <!-- Re-using this table style -->
+                                 <thead><tr><th>Operation</th><th>Units ${mode === 'encode' ? 'Modified' : 'Checked'}</th><th>Units Remaining</th><th>Status</th></tr></thead>
+                                 <tbody>
+                                    <tr>
+                                        <td>${step.step_title}</td>
+                                        <td class="highlight-cell">${(step.data.pixels_modified || step.data.samples_modified || 0).toLocaleString()}</td>
+                                        <td class="dim">${(step.data.pixels_unchanged || step.data.samples_unchanged || '...').toLocaleString()}</td>
+                                        <td class="dim">${step.data.delimiter_status || '...'}</td>
+                                    </tr>
+                                 </tbody>
+                             </table>
+                         </div>
                     </div>
                  `;
-            } else if (step.step_title.includes("Initial Pixel Data") || step.step_title.includes("Initial Sample Data")) {
-                 // Special step for decoding/encoding start
-                 contentHtml = `
-                    <div class="stego-block" style="opacity:1; transform:translateY(0);">
-                        <h4>Media Data Structure (Initial Unit)</h4>
-                        <p class="viz-description">${step.description}</p>
-                        ${renderLsbOperationMatrix(media, step)}
-                        <p class="dim" style="margin-top:1rem;">Extraction/Modification will start with the least significant bit (LSB).</p>
-                    </div>
-                 `;
+            } else {
+                // Fallback for any missed LSB step
+                contentHtml = `<div class="stego-block" style="opacity:1; transform:translateY(0);"><p>${step.description}</p></div>`;
             }
+        
         } else if (media === 'video') {
+            // Append Steps
             contentHtml = renderAppendStep(media, step); 
         }
         

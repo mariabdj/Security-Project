@@ -1,11 +1,12 @@
 /* ---
    SSAD Steganography Stylesheet (steganography.css)
+   [MODIFIED FOR NEW CARD-BASED VISUALS]
    --- */
 
-/* 1. Modal Body & Tab Layout */
+/* 1. Modal Body & Tab Layout (Unchanged) */
 .stego-modal-body {
     padding-top: 0;
-    min-height: 80vh; /* Increased height for visualization */
+    min-height: 80vh; 
 }
 .stego-tabs {
     border-bottom: 1px solid var(--border-color);
@@ -15,10 +16,10 @@
     max-width: 100%;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: 1fr; /* Default: Single column */
+    grid-template-columns: 1fr; 
 }
 
-/* 2. Setup Container (Form) */
+/* 2. Setup Container (Form) (Unchanged) */
 .stego-setup-container {
     max-width: 800px;
     margin: 0 auto;
@@ -29,7 +30,7 @@
 .stego-message-info {
     font-size: 0.85rem;
     color: var(--text-secondary);
-    margin-top: -1rem; /* Adjust positioning */
+    margin-top: -1rem;
 }
 .stego-actions {
     display: flex;
@@ -41,8 +42,7 @@
     padding: 0.8rem 1.75rem;
 }
 
-
-/* 3. File Type Selector */
+/* 3. File Type Selector (Unchanged) */
 .stego-file-type-selector {
     display: flex;
     flex-direction: column;
@@ -93,7 +93,7 @@
     transition: color 0.3s ease;
 }
 
-/* 4. File Input & Preview (Reused from attack.css/existing) */
+/* 4. File Input & Preview (Unchanged) */
 .stego-file-input-area {
     display: flex;
     flex-direction: column;
@@ -129,9 +129,8 @@
     width: 100%;
     border: none;
 }
-/* [END File Input & Preview] */
 
-/* 5. Status Messages (Reused from existing) */
+/* 5. Status Messages (Unchanged) */
 .stego-status {
     margin-top: 1rem;
     padding: 1rem 1.5rem;
@@ -154,13 +153,13 @@
 
 /* --- STEGANOGRAPHY ANIMATION STYLES --- */
 
+/* 6. Animation Player Layout (Unchanged) */
 .stego-anim-container {
     display: none; /* Controlled by JS */
     min-height: 60vh;
     padding-top: 1rem;
 }
 .stego-anim-container .anim-player {
-    /* Reuses .anim-player from visualize.css but as full width */
     display: flex;
     flex-direction: column;
     background-color: var(--bg-primary); 
@@ -170,11 +169,9 @@
     width: 100%;
 }
 .stego-anim-container .anim-header {
-    /* Reuses .anim-header */
     padding: 1rem 1.5rem;
 }
 .stego-anim-container .anim-description {
-    /* Reuses .anim-description */
     padding: 1.5rem;
 }
 .stego-anim-stage {
@@ -199,8 +196,7 @@
     padding: 0.8rem 1.5rem;
 }
 
-/* -- Stego Specific Blocks -- */
-
+/* 7. Stego Specific Blocks (Unchanged) */
 .stego-block {
     width: 100%;
     padding: 1rem;
@@ -239,8 +235,11 @@
      padding: 0 2px;
      border-radius: 2px;
 }
+.stego-block .dim, .dim {
+    opacity: 0.6;
+}
 
-/* Capacity/Progress Bar */
+/* Capacity/Progress Bar (Unchanged) */
 .stego-capacity-bar {
     width: 100%;
     height: 20px;
@@ -268,73 +267,200 @@
     font-size: 0.75rem;
 }
 
-/* Pixel/Sample Visualization */
-.stego-lsb-viz {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr); /* Channel, Decimal, Binary */
-    gap: 1rem;
-    padding: 1rem;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-}
-.stego-lsb-channel {
+
+/* --- [NEW] LSB Visualization Card Styles --- */
+
+/* This is the container for the (optional) color preview */
+.stego-lsb-viz-container {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    border-radius: 6px;
-    background-color: var(--bg-input);
+    align-items: center;
+    gap: 1.5rem;
+    width: 100%;
 }
-.stego-lsb-channel.R { border-left: 5px solid #ef4444; }
-.stego-lsb-channel.G { border-left: 5px solid #22c55e; }
-.stego-lsb-channel.B { border-left: 5px solid #3b82f6; }
-.stego-lsb-channel.Sample { border-left: 5px solid #8b5cf6; }
 
-.stego-lsb-channel label {
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--text-secondary);
+/* This is the container for the R, G, B cards */
+.stego-lsb-viz {
+    display: grid;
+    grid-template-columns: 1fr; /* Default to 1 column for audio */
+    gap: 1rem;
+    width: 100%;
 }
-.stego-lsb-value {
-    font-size: 1.5rem;
-    font-weight: 700;
-    font-family: monospace;
+
+/* On wider screens, show 3 columns for images */
+@media (min-width: 768px) {
+    .stego-lsb-viz.image {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* The card for a single channel (R, G, B, or Sample) */
+.stego-lsb-channel-card {
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* Add colored top border */
+    border-top-width: 4px;
+}
+.stego-lsb-channel-card.Red { border-top-color: #ef4444; }
+.stego-lsb-channel-card.Green { border-top-color: #22c55e; }
+.stego-lsb-channel-card.Blue { border-top-color: #3b82f6; }
+.stego-lsb-channel-card.Sample { border-top-color: #8b5cf6; }
+
+.stego-lsb-channel-card h4 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
     color: var(--text-primary);
 }
-.stego-lsb-binary {
-    font-size: 1rem;
-    font-weight: 500;
-    font-family: monospace;
-    color: var(--text-secondary);
-    letter-spacing: 1px;
+
+/* A single group (Before, Calculation, After) */
+.stego-lsb-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    width: 100%;
+    padding: 0.75rem 0;
 }
-.stego-lsb-binary.new-value {
-    color: var(--success);
-    font-weight: 700;
-}
-.stego-lsb-binary .lsb {
-    background-color: var(--accent-primary);
-    color: var(--text-on-accent);
-    padding: 0 2px;
-    border-radius: 2px;
-    transition: background-color 0.3s ease;
-}
-.stego-lsb-binary.new-value .lsb {
-    background-color: var(--success);
-}
-.stego-calc {
-    font-family: monospace;
-    font-size: 0.9rem;
-    padding: 1rem;
-    background-color: var(--bg-input);
-    border-radius: 6px;
-    color: var(--text-secondary);
-    line-height: 1.5;
-    word-break: break-all;
+/* Add divider lines */
+.stego-lsb-group + .stego-lsb-group {
+    border-top: 1px dashed var(--border-color);
 }
 
-/* Media Preview in Stage */
+.stego-lsb-group label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.25rem;
+}
+
+.stego-lsb-group .value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: var(--font-family); /* Not monospace */
+}
+.stego-lsb-group .binary {
+    font-family: monospace;
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+.stego-lsb-group .op {
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    background-color: var(--bg-input);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+}
+.stego-lsb-group .bit {
+    font-family: monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--accent-primary);
+    margin-top: 0.25rem;
+}
+.stego-lsb-group .value.new,
+.stego-lsb-group .binary.new {
+    color: var(--success);
+}
+.stego-lsb-group .bit.decode {
+    color: var(--success);
+}
+
+/* LSB Highlight Span */
+.lsb {
+    font-weight: 700;
+    padding: 1px 3px;
+    border-radius: 3px;
+    background-color: var(--accent-secondary);
+    color: var(--text-primary);
+}
+.lsb.modified {
+    background-color: var(--success);
+    color: var(--text-on-notify);
+}
+.lsb.extracted {
+    background-color: var(--accent-primary);
+    color: var(--text-on-notify);
+}
+
+/* Color Preview Box (for Image) */
+.stego-color-preview-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    width: 100%;
+    max-width: 300px;
+}
+.stego-color-preview-block h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+.stego-color-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+}
+.color-box {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+.color-arrow {
+    font-size: 1.75rem;
+    color: var(--text-secondary);
+}
+
+/* [NEW] Conversion Table (Step 1) */
+.stego-table-container {
+    width: 100%;
+    overflow-x: auto; /* Allow scrolling on small screens */
+}
+.stego-conversion-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+.stego-conversion-table th,
+.stego-conversion-table td {
+    border: 1px solid var(--border-color);
+    padding: 0.5rem 0.75rem;
+    text-align: center;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+.stego-conversion-table th {
+     background-color: var(--bg-input);
+     font-weight: 600;
+     font-family: var(--font-family);
+     color: var(--text-secondary);
+}
+.stego-conversion-table td:first-child {
+    font-weight: 700;
+    color: var(--text-primary);
+    font-family: var(--font-family);
+}
+
+
+/* Media Preview in Stage (Unchanged) */
 .stego-stage-media {
     max-width: 100%;
     margin: 1rem 0;
@@ -351,10 +477,10 @@
     object-fit: contain;
 }
 
-/* Hex / Byte View (Video) */
+/* Hex / Byte View (Video) (Unchanged) */
 .stego-hex-view {
     font-family: monospace;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     white-space: pre-wrap;
     word-break: break-all;
     line-height: 1.8;
@@ -367,25 +493,55 @@
     background-color: color-mix(in srgb, var(--accent-primary) 30%, transparent);
     color: var(--text-primary);
     font-weight: 700;
+    padding: 2px 0;
 }
 .stego-hex-view .highlight-message {
     background-color: color-mix(in srgb, var(--success) 30%, transparent);
     color: var(--text-primary);
     font-weight: 700;
+    padding: 2px 0;
 }
 
-/* 6. Responsive */
+/* Final Result Text (Unchanged) */
+.stego-results {
+    border: 1px solid var(--accent-primary);
+    border-radius: 8px;
+    background-color: var(--bg-secondary);
+    padding: 1rem;
+    margin-top: 1rem;
+    text-align: left;
+}
+.stego-results h4 {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+.stego-results pre {
+    background-color: var(--bg-input);
+    border-radius: 6px;
+    padding: 1rem;
+    font-family: monospace;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+/* 6. Responsive (Unchanged) */
 @media (max-width: 768px) {
     .stego-modal-body { min-height: 70vh; }
-    .stego-lsb-viz {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-    }
     .stego-final-actions {
         flex-direction: column;
     }
     .stego-final-actions .btn {
         width: 100%;
         justify-content: center;
+    }
+    /* Stack LSB cards on mobile */
+    .stego-lsb-viz.image {
+        grid-template-columns: 1fr;
     }
 }

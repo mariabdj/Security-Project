@@ -60,10 +60,8 @@ async function sha256(message) {
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- Configuration ---
-    // !!! SET THIS TO http://127.0.0.1:8000 FOR LOCAL TESTING !!!
-    // !!! SET THIS TO https://security-app-ssad.fly.dev FOR DEPLOYMENT !!!
-    // const API_URL = 'http://127.0.0.1:8000'; 
-    const API_URL = 'https://security-app-ssad.fly.dev';
+    const API_URL = 'http://127.0.0.1:8000'; 
+    // const API_URL = 'https://security-app-ssad.fly.dev';
 
 
     // --- Element Selection ---

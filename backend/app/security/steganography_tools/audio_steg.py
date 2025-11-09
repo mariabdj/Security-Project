@@ -14,11 +14,14 @@ def get_new_sample(orig_val: int, bit_to_hide: int) -> int:
 def get_binary_repr_16bit(val: int) -> str:
     """Helper to get 16-bit binary representation (important for signed int16)."""
     try:
+        # Use numpy.binary_repr for correct signed 16-bit representation
         return np.binary_repr(val, width=16)
-    except:
-        return "N/A"
+    except Exception:
+        # Fallback for any unexpected errors
+        return format(val & 0xFFFF, '016b')
 
-# --- Steganography Functional Implementations (Existing) ---
+
+# --- Steganography Functional Implementations (Existing/Unchanged) ---
 
 def encode_message(audio_bytes: bytes, secret_message: str) -> bytes:
     """Hides a secret message within a WAV audio file using LSB."""
@@ -87,59 +90,58 @@ def decode_message(audio_bytes: bytes) -> str:
     return secret_message
 
 
-# --- [NEW] Steganography Visualization Logic (MAX DETAIL) ---
+# --- [MODIFIED] Steganography Visualization Logic ---
 
-def _generate_lsb_sample_step(steps: List[StegoVisualizationStep], sample: int, bit_index: int, binary_message: str, current_sample_index: int, total_samples: int, mode: str):
-    """Generates detailed LSB steps for one audio sample."""
-    sample_orig = sample
+def _generate_lsb_sample_step(sample_index: int, sample_val: int, bit_index: int, binary_message: str, mode: str) -> StegoVisualizationStep:
+    """
+    [MODIFIED HELPER] Generates detailed LSB steps for one audio sample.
+    """
+    sample_orig = int(sample_val) # Ensure it's a standard int
+    is_encode = mode == 'encode'
+    data = {
+        "index": int(sample_index),
+        "bit_index_start": int(bit_index),
+        "sample_orig": sample_orig, 
+        "sample_orig_bin": get_binary_repr_16bit(sample_orig),
+    }
     
-    if mode == 'encode':
-        if bit_index >= len(binary_message): return
-        bit_to_hide = int(binary_message[bit_index])
+    if is_encode:
+        if bit_index >= len(binary_message):
+             # This case shouldn't be hit if called correctly, but good for safety
+             bit_to_hide = sample_orig & 1
+        else:
+             bit_to_hide = int(binary_message[bit_index])
         
-        # Calculate intermediate and final values
-        sample_temp = sample_orig & ~1
-        sample_new = sample_temp | bit_to_hide
+        sample_new = get_new_sample(sample_orig, bit_to_hide)
         
-        steps.append(StegoVisualizationStep(
-            step_title=f"Step {len(steps) + 1}: LSB Modification Matrix (Sample {current_sample_index})",
-            description=f"Hiding **Bit {bit_index}** ('{bit_to_hide}') in Sample {current_sample_index}. The operation **(Value & ~1) | Bit** both clears the LSB and inserts the new secret bit.",
-            media_type='audio',
-            mode='encode',
-            data={
-                "index": int(current_sample_index),
-                "bit_index_start": int(bit_index),
-                "sample_orig": int(sample_orig), 
-                "sample_orig_bin": get_binary_repr_16bit(sample_orig),
-                "sample_new": int(sample_new), 
-                "sample_new_bin": get_binary_repr_16bit(sample_new),
-                "bit_to_hide": int(bit_to_hide)
-            }
-        ))
+        data.update({
+            "sample_new": int(sample_new), 
+            "sample_new_bin": get_binary_repr_16bit(sample_new),
+            "bit_to_hide": int(bit_to_hide)
+        })
+        description=f"Hiding **Bit {bit_index}** ('{bit_to_hide}') in Sample {sample_index}. The operation **(Value & ~1) | Bit** clears the LSB and inserts the new bit."
     
-    elif mode == 'decode':
+    else: # Decode
         bit_extracted = sample_orig & 1
-        steps.append(StegoVisualizationStep(
-            step_title=f"Step {len(steps) + 1}: LSB Extraction Matrix (Sample {current_sample_index})",
-            description=f"Targeting Sample {current_sample_index}. The simple operation **(Value & 1)** isolates the LSB. Extracted bit: **{bit_extracted}**.",
-            media_type='audio',
-            mode='decode',
-            data={
-                "index": int(current_sample_index),
-                "bit_index_start": int(bit_index),
-                "bit_extracted": int(bit_extracted),
-                "sample_orig": int(sample_orig), 
-                "sample_orig_bin": get_binary_repr_16bit(sample_orig),
-                # For decoding matrix, new_val and new_bin are the same as orig_val/bin
-                "sample_new": int(sample_orig), 
-                "sample_new_bin": get_binary_repr_16bit(sample_orig),
-                "bit_to_hide": int(bit_extracted) # Reused field for matrix column
-            }
-        ))
+        data.update({
+            "bit_extracted": int(bit_extracted),
+            "sample_new": sample_orig, # For JS consistency
+            "sample_new_bin": get_binary_repr_16bit(sample_orig),
+            "bit_to_hide": int(bit_extracted) # Reuse field for matrix
+        })
+        description=f"Targeting Sample {sample_index}. The operation **(Value & 1)** isolates the LSB. Extracted bit: **{bit_extracted}**."
+
+    return StegoVisualizationStep(
+        step_title=f"LSB {mode.capitalize()} Matrix (Sample {sample_index})",
+        description=description,
+        media_type='audio',
+        mode=mode,
+        data=data
+    )
 
 
 def visualize_encode_lsb_audio(audio_bytes: bytes, secret_message: str) -> List[StegoVisualizationStep]:
-    """Generates a step-by-step visualization for LSB audio encoding."""
+    """[MODIFIED] Generates a step-by-step visualization for LSB audio encoding."""
     steps = []
     
     try:
@@ -155,7 +157,7 @@ def visualize_encode_lsb_audio(audio_bytes: bytes, secret_message: str) -> List[
     binary_message = ''.join(format(ord(char), '08b') for char in encoded_message)
     message_length_bits = len(binary_message)
 
-    # Step 1: Message to Bits & Capacity Check
+    # --- Step 1: Message to Bits & Capacity Check (Unchanged) ---
     steps.append(StegoVisualizationStep(
         step_title="Step 1: Message Conversion and Capacity Check",
         description=f"The message '{secret_message}' + delimiter is {message_length_bits} bits. The audio file has {total_samples} samples. Capacity is 1 bit per sample (total {total_samples} bits).",
@@ -172,33 +174,41 @@ def visualize_encode_lsb_audio(audio_bytes: bytes, secret_message: str) -> List[
     if message_length_bits > total_samples:
         return steps
 
-    # --- Step 2 & 3: LSB Modification Matrix (Sample 0 & 1) ---
-    _generate_lsb_sample_step(steps, flat_data[0], 0, binary_message, 0, total_samples, 'encode')
-    _generate_lsb_sample_step(steps, flat_data[1], 1, binary_message, 1, total_samples, 'encode')
+    # --- [NEW] Step 2, 3, 4: LSB Modification Matrix (Sample 0, 1, 2) ---
+    for i in range(3):
+         if i < total_samples and i < message_length_bits:
+             steps.append(_generate_lsb_sample_step(
+                 sample_index=i,
+                 sample_val=flat_data[i],
+                 bit_index=i,
+                 binary_message=binary_message,
+                 mode='encode'
+             ))
     
-    # Step 4: First Character Assembly
+    # --- [MODIFIED] Step 5: First Character Assembly ---
     first_byte_length = min(8, message_length_bits)
     first_byte_binary = binary_message[:first_byte_length]
+    first_char_code = int(first_byte_binary, 2) if first_byte_length >= 8 else 0
     
     steps.append(StegoVisualizationStep(
-        step_title="Step 4: Hiding the First Byte",
-        description=f"It takes {first_byte_length} consecutive samples (0 to {first_byte_length-1}) to hide the first 8 bits (one character) of the message. The process continues until the first character is concealed.",
+        step_title="Step 5: Hiding the First Byte",
+        description=f"It takes {first_byte_length} consecutive samples (0 to {first_byte_length-1}) to hide the first 8 bits ('{chr(first_char_code)}') of the message.",
         media_type='audio',
         mode='encode',
         data={
             "bit_count": int(first_byte_length),
             "units_used": int(first_byte_length),
             "binary_stream": first_byte_binary,
-            "first_char": chr(int(first_byte_binary, 2)) if first_byte_length >= 8 else None
+            "first_char": chr(first_char_code) if first_byte_length >= 8 else None
         }
     ))
     
-    # Step 5: Processing Subsequent Samples (Continuous)
+    # --- [MODIFIED] Step 6: Continuous Modification ---
     samples_modified_count = message_length_bits
     samples_unchanged_count = total_samples - samples_modified_count
     
     steps.append(StegoVisualizationStep(
-        step_title="Step 5: Processing Subsequent Samples Modification",
+        step_title="Step 6: Continuous LSB Modification",
         description=f"The LSB modification continues until the entire message is hidden. Once complete, the remaining {samples_unchanged_count} samples are copied without modification.",
         media_type='audio',
         mode='encode',
@@ -206,14 +216,14 @@ def visualize_encode_lsb_audio(audio_bytes: bytes, secret_message: str) -> List[
             "samples_modified": int(samples_modified_count),
             "samples_unchanged": int(samples_unchanged_count),
             "total_samples": int(total_samples),
-            "next_index": int(samples_modified_count),
+            "next_index": int(first_byte_length),
             "message_bits_count": int(message_length_bits),
         }
     ))
 
-    # Step 6: Final Stats
+    # --- Step 7: Final Stats ---
     steps.append(StegoVisualizationStep(
-        step_title="Step 6: Final Summary and Download",
+        step_title="Step 7: Final Summary and Download",
         description=f"The entire message has been hidden across the first {samples_modified_count} samples. The file is saved as lossless WAV.",
         media_type='audio',
         mode='encode',
@@ -228,7 +238,7 @@ def visualize_encode_lsb_audio(audio_bytes: bytes, secret_message: str) -> List[
     return steps
 
 def visualize_decode_lsb_audio(audio_bytes: bytes) -> List[StegoVisualizationStep]:
-    """Generates a step-by-step visualization for LSB audio decoding."""
+    """[MODIFIED] Generates a step-by-step visualization for LSB audio decoding."""
     steps = []
     
     try:
@@ -241,9 +251,7 @@ def visualize_decode_lsb_audio(audio_bytes: bytes) -> List[StegoVisualizationSte
     delimiter = "####"
     binary_delimiter = ''.join(format(ord(char), '08b') for char in delimiter)
 
-    # Step 1: Start Decoding (Show initial sample data)
-    s0 = flat_data[0]
-    
+    # --- Step 1: Start Decoding (Show initial sample data) ---
     steps.append(StegoVisualizationStep(
         step_title="Step 1: Start Decoding - Initial Sample Data",
         description="Decoding begins by reading the first audio sample. We extract the Last Significant Bit (LSB) from each sample and assemble the secret binary stream.",
@@ -251,29 +259,38 @@ def visualize_decode_lsb_audio(audio_bytes: bytes) -> List[StegoVisualizationSte
         mode='decode',
         data={
             "index": int(0),
-            "sample_orig": int(s0),
-            "sample_orig_bin": get_binary_repr_16bit(s0),
+            "sample_orig": int(flat_data[0]),
+            "sample_orig_bin": get_binary_repr_16bit(int(flat_data[0])),
             "delimiter_bits": binary_delimiter
         }
     ))
     
-    # Step 2 & 3: LSB Extraction Matrix (Sample 0 & 1)
-    _generate_lsb_sample_step(steps, flat_data[0], 0, "", 0, total_samples, 'decode')
-    _generate_lsb_sample_step(steps, flat_data[1], 1, "", 1, total_samples, 'decode')
-    
-    # Step 4: First Character Assembly
+    # --- [NEW] Step 2, 3, 4: LSB Extraction Matrix (Sample 0, 1, 2) ---
     binary_message_full = ""
+    for i in range(3):
+        if i < total_samples:
+            sample_val = int(flat_data[i])
+            steps.append(_generate_lsb_sample_step(
+                 sample_index=i,
+                 sample_val=sample_val,
+                 bit_index=i,
+                 binary_message="",
+                 mode='decode'
+             ))
+            binary_message_full += str(sample_val & 1)
+    
+    # --- [MODIFIED] Step 5: First Character Assembly ---
+    binary_stream_fuller = ""
     samples_used = 0
-    for idx in range(len(flat_data)):
-        binary_message_full += str(flat_data[idx] & 1)
+    for idx in range(min(8, total_samples)):
+        binary_stream_fuller += str(int(flat_data[idx]) & 1)
         samples_used += 1
-        if len(binary_message_full) >= 8: break
 
-    first_byte = binary_message_full[:8]
+    first_byte = binary_stream_fuller[:8]
     first_char = chr(int(first_byte, 2)) if len(first_byte) == 8 else '...'
     
     steps.append(StegoVisualizationStep(
-        step_title="Step 4: First Character Assembled (8 Bits)",
+        step_title="Step 5: First Character Assembled (8 Bits)",
         description=f"8 consecutive bits are extracted from the first 8 samples. These 8 bits ({first_byte}) form the first character: '{first_char}'.",
         media_type='audio',
         mode='decode',
@@ -281,27 +298,23 @@ def visualize_decode_lsb_audio(audio_bytes: bytes) -> List[StegoVisualizationSte
             "units_used": int(samples_used),
             "first_byte": first_byte,
             "first_char": first_char,
-            "binary_stream": binary_message_full,
+            "binary_stream": binary_stream_fuller,
             "delimiter_status": "NOT YET FOUND"
         }
     ))
     
-    # Step 5: Continuous Search
-    
+    # --- [MODIFIED] Step 6: Continuous Search ---
     final_message_from_decode = decode_message(audio_bytes)
     message_bits_count = len(final_message_from_decode + delimiter) * 8 if final_message_from_decode else 0
-    samples_checked_for_viz = message_bits_count
-    
-    # Clamp to prevent excessive iteration in case of very large files
-    samples_checked_for_viz = min(samples_checked_for_viz, total_samples, 1000) 
+    samples_checked_for_viz = min(message_bits_count, total_samples, 1000) # Clamp
     
     steps.append(StegoVisualizationStep(
-        step_title="Step 5: Delimiter Search and Continuous Extraction",
+        step_title="Step 6: Delimiter Search and Continuous Extraction",
         description=f"The extraction continues sample by sample. The assembled stream is checked every 8 bits to detect the delimiter '####' and stop the process.",
         media_type='audio',
         mode='decode',
         data={
-            "samples_modified": int(samples_checked_for_viz),
+            "samples_modified": int(samples_checked_for_viz), # Re-using 'modified' as 'checked'
             "samples_unchanged": int(total_samples - samples_checked_for_viz),
             "index": int(samples_checked_for_viz),
             "total_samples": int(total_samples),
@@ -310,10 +323,9 @@ def visualize_decode_lsb_audio(audio_bytes: bytes) -> List[StegoVisualizationSte
         }
     ))
     
-    # Step 6: Final Decoded Result
-    
+    # --- Step 7: Final Decoded Result ---
     steps.append(StegoVisualizationStep(
-        step_title="Step 6: Final Decoded Result",
+        step_title="Step 7: Final Decoded Result",
         description="The message bits before the delimiter are assembled and converted back to the final secret text.",
         media_type='audio',
         mode='decode',
